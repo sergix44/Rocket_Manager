@@ -78,7 +78,7 @@ def cleanUp():
 
 def main():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.1                         ")
+    print("                          SergiX44's Rocket Manager 1.2                         ")
     print("--------------------------------------------------------------------------------\n\n")
     print("Loading config...")
     
