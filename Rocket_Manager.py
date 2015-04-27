@@ -84,7 +84,7 @@ def main():
     
     if(loadConfig("config.properties")):
         print("Close and edit config.properties, then restart me!")
-        time.sleep(5)
+        raw_input("Press any key to continue...")
         sys.exit(1)
 
 
@@ -106,6 +106,12 @@ def main():
                 sys.exit(1)
 
     while 1:
+        #reloading config
+        if(loadConfig("config.properties")):
+            print("Failed loading config! :( \nConfig file regenerated, edit config.properties, then restart me!")
+            raw_input("Press any key to continue...")
+            sys.exit(2)
+            
         #launch steam cmd
         print("Launching steam...")
         print "--------------------------------------------------------------------------------\n\n"
