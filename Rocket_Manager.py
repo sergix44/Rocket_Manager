@@ -15,42 +15,69 @@ OUTPUT_ZIP_ROCKET="rocket_temp.zip"
 
 PROCNAME = "Unturned.exe"
 
+def writeConfig(name):
+    f=open(name,"w")
+    f.write("reboot_after_seconds=3600\n")
+    f.write("unturned_folder_path=.\\unturned\n")
+    f.write("servers_to_launch(separed_by_a_'|')=server1|server2\n")
+    f.write("use_rocket_beta_updates=true\n")
+    f.write("update_validate(unturned_updates)=true\n")
+    f.write("steam_username=changeme\n")
+    f.write("steam_password=changeme\n")
+    f.close()
+
 def loadConfig(name):
     global rebootTime
     global serversToLaunch
     global unturnedPath
     global useBeta
+    global validateUpdates
     global steamUser
     global steamPass
     
     if (not os.path.isfile(name)):
-        f=open(name,"w")
-        f.write("reboot_after_seconds=3600\n")
-        f.write("unturned_folder_path=.\\unturned\n")
-        f.write("servers_to_launch(separed by a '|')=server1|server2\n")
-        f.write("use_rocket_beta_updates=true\n")
-        f.write("steam_username=changeme\n")
-        f.write("steam_password=changeme\n")
-        f.close()
+        writeConfig(name)
         return True
         
+    try:    
+        f=open(name, "r")
+
+        #reboot time
+        ln=f.readline()
+        rebootTime=int(ln.split("=")[1])
+
+        #unturned path
+        ln=f.readline()
+        unturnedPath=ln.split("=")[1].rstrip()
+
+        #servers to launch array
+        ln=f.readline()
+        serversToLaunch=ln.split("=")[1].split("|")
+        serversToLaunch[len(serversToLaunch)-1]=serversToLaunch[len(serversToLaunch)-1].rstrip()
+
+        #use beta
+        ln=f.readline()
+        useBeta=ln.split("=")[1].rstrip()
+
+        #validate updates
+        ln=f.readline()
+        validateUpdates=ln.split("=")[1].rstrip()
         
-    f=open(name, "r")
-    ln=f.readline()
-    rebootTime=int(ln.split("=")[1])
-    ln=f.readline()
-    unturnedPath=ln.split("=")[1].rstrip()
-    ln=f.readline()
-    serversToLaunch=ln.split("=")[1].split("|")
-    serversToLaunch[len(serversToLaunch)-1]=serversToLaunch[len(serversToLaunch)-1].rstrip()
-    ln=f.readline()
-    useBeta=ln.split("=")[1].rstrip()
-    ln=f.readline()
-    steamUser=ln.split("=")[1].rstrip()
-    ln=f.readline()
-    steamPass=ln.split("=")[1].rstrip()
-    f.close()
-    return False
+        #steam username
+        ln=f.readline()
+        steamUser=ln.split("=")[1].rstrip()
+        
+        #steam password
+        ln=f.readline()
+        steamPass=ln.split("=")[1].rstrip()
+        
+        f.close()
+        return False
+    
+    except:
+        writeConfig(name)
+        return True
+    
     
 def downloader(i):
     err=False
@@ -127,10 +154,11 @@ def main():
             sys.exit(2)
             
         #launch steam cmd
-        print("Launching steam...")
-        print "--------------------------------------------------------------------------------\n\n"
-        os.system("steamcmd.exe +login "+steamUser+" "+steamPass+" +force_install_dir "+unturnedPath+" +app_update 304930 -beta preview -betapassword OPERATIONMAPLELEAF validate +exit")
-        print "--------------------------------------------------------------------------------\n\n"
+        if((not os.path.isdir(unturnedPath)) or (validateUpdates=="true")):
+            print("Launching steam...")
+            print "--------------------------------------------------------------------------------\n\n"
+            os.system("steamcmd.exe +login "+steamUser+" "+steamPass+" +force_install_dir "+unturnedPath+" +app_update 304930 -beta preview -betapassword OPERATIONMAPLELEAF validate +exit")
+            print "--------------------------------------------------------------------------------\n\n"
 
         #download and extract
         print("Downloading rocket...")
@@ -143,11 +171,17 @@ def main():
         extractor(OUTPUT_ZIP_ROCKET)
 
         #Moving files
-        print("Installing Rocket...")
-        for f in os.listdir("rocket\\"):
-            src_file = os.path.join("rocket\\", f)
-            dst_file = os.path.join(unturnedPath+"\\Unturned_Data\\Managed\\", f)
-            shutil.copyfile(src_file, dst_file)
+        try:
+            print("Installing Rocket...")
+            for f in os.listdir("rocket\\"):
+                src_file = os.path.join("rocket\\", f)
+                dst_file = os.path.join(unturnedPath+"\\Unturned_Data\\Managed\\", f)
+                shutil.copyfile(src_file, dst_file)
+        except IOError:
+            print("Unable to install rocket! try to revalidate the installation!")
+            cleanUp()
+            raw_input("Press any key to continue...")
+            sys.exit(4)
 
         #clean up zips and extracted files
         print("Cleaning up...")
