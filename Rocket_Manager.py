@@ -53,13 +53,22 @@ def loadConfig(name):
     return False
     
 def downloader(i):
+    err=False
     if (i=="steam"):
-        urllib.urlretrieve (URL_STEAM, OUTPUT_ZIP_STEAM)
+        try:
+            urllib.urlretrieve (URL_STEAM, OUTPUT_ZIP_STEAM)
+        except:
+            err=True
+            
     if (i=="rocket"):
-        if(useBeta=="false"):
-            urllib.urlretrieve (URL_ROCKET_STABLE, OUTPUT_ZIP_ROCKET)
-        if(useBeta=="true"):
-            urllib.urlretrieve (URL_ROCKET_BETA, OUTPUT_ZIP_ROCKET)
+        try:
+            if(useBeta=="false"):
+                urllib.urlretrieve (URL_ROCKET_STABLE, OUTPUT_ZIP_ROCKET)
+            if(useBeta=="true"):
+                urllib.urlretrieve (URL_ROCKET_BETA, OUTPUT_ZIP_ROCKET)
+        except:
+            err=True
+    return err
             
 def extractor(name):
     zfile = zipfile.ZipFile(name)
@@ -78,7 +87,7 @@ def cleanUp():
 
 def main():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.2                         ")
+    print("                          SergiX44's Rocket Manager 1.3                         ")
     print("--------------------------------------------------------------------------------\n\n")
     print("Loading config...")
     
@@ -91,10 +100,14 @@ def main():
     if (not os.path.isfile("steamcmd.exe")):
         ex=True
         while (ex):
-            sel=raw_input("SteamCMD not found!! Would you like download it? (y/n) ")
+            sel=raw_input("SteamCMD not found! Would you like download it? (y/n) ")
             if(sel=="y"):
+                
                 print("Downloading steamcmd...")
-                downloader("steam")
+                if(downloader("steam")):
+                    raw_input("Press any key to continue...")
+                    sys.exit(3)
+                    
                 zfile = zipfile.ZipFile(OUTPUT_ZIP_STEAM)
                 zfile.extractall()
                 zfile.close()
@@ -120,7 +133,10 @@ def main():
 
         #download and extract
         print("Downloading rocket...")
-        downloader("rocket")
+        if(downloader("rocket")):
+            print("ERROR: Unable to download rocket! Please check your internet settings!")
+            raw_input("Press any key to continue...")
+            sys.exit(3)
 
         print("Extracting rocket...")
         extractor(OUTPUT_ZIP_ROCKET)
@@ -132,13 +148,17 @@ def main():
             dst_file = os.path.join(unturnedPath+"\\Unturned_Data\\Managed\\", f)
             shutil.copyfile(src_file, dst_file)
 
+        #clean up zips and extracted files
         print("Cleaning up...")
         cleanUp()
 
+        #launching servers
         print("Launching servers...")
         for i in range(0, len(serversToLaunch)):
+            print("    - Launching "+serversToLaunch[i])
             os.system("start "+unturnedPath+"\Unturned.exe -nographics -batchmode +secureserver/"+serversToLaunch[i])
 
+        #timer
         counter=rebootTime
         while(counter>=0):
                 sys.stdout.write('Waiting %s ...\r' % str(counter))
