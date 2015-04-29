@@ -105,6 +105,7 @@ def main():
                 
                 print("Downloading steamcmd...")
                 if(downloader("steam")):
+                    print("ERROR: Unable to download steam! Please check your internet settings!")
                     raw_input("Press any key to continue...")
                     sys.exit(3)
                     
