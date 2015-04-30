@@ -4,10 +4,11 @@ import os
 import urllib
 import zipfile
 import shutil
+import apikey
 
 #--Constants
-URL_ROCKET_STABLE="https://ci.rocket.foundation/view/Rocket.Foundation/job/Rocket%20Release/lastSuccessfulBuild/artifact/RocketLoader/bin/Release/Rocket.zip"
-URL_ROCKET_BETA="https://ci.rocket.foundation/view/Rocket.Foundation/job/Rocket%20Beta/lastSuccessfulBuild/artifact/RocketLoader/bin/Release/Rocket.zip"
+URL_ROCKET_STABLE="http://api.rocket.foundation/release/latest/"+apikey.key
+URL_ROCKET_BETA="http://api.rocket.foundation/beta/latest/"+apikey.key
 URL_STEAM="http://media.steampowered.com/installer/steamcmd.zip"
 
 OUTPUT_ZIP_STEAM="steam_temp.zip"
