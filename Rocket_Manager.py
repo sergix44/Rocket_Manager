@@ -4,6 +4,7 @@ import os
 import urllib
 import zipfile
 import shutil
+import socket
 import apikey
 
 #--Constants
@@ -19,8 +20,11 @@ PROCNAME = "Unturned.exe"
 def writeConfig(name):
     f=open(name,"w")
     f.write("reboot_after_seconds=3600\n")
+    f.write("notify_before_seconds=60\n")
     f.write("unturned_folder_path=.\\unturned\n")
     f.write("servers_to_launch(separed_by_a_'|')=server1|server2\n")
+    f.write("rcon_port=27014\n")
+    f.write("rcon_password=rmanager\n")
     f.write("use_rocket_beta_updates=true\n")
     f.write("update_validate(unturned_updates)=true\n")
     f.write("steam_username=changeme\n")
@@ -28,13 +32,16 @@ def writeConfig(name):
     f.close()
 
 def loadConfig(name):
-    global rebootTime
-    global serversToLaunch
-    global unturnedPath
-    global useBeta
-    global validateUpdates
-    global steamUser
-    global steamPass
+    global REBOOT_TIME
+    global NOTIFY_TIME
+    global SERVERS_TO_LAUNCH
+    global RCON_PORT
+    global RCON_PASSWORD
+    global UNTURNED_PATH
+    global USE_BETA
+    global VALIDATE_AT_BOOT
+    global STEAM_USER
+    global STEAM_PASS
     
     if (not os.path.isfile(name)):
         writeConfig(name)
@@ -45,32 +52,47 @@ def loadConfig(name):
 
         #reboot time
         ln=f.readline()
-        rebootTime=int(ln.split("=")[1])
+        REBOOT_TIME=int(ln.split("=")[1])
 
+        #notify time
+        ln=f.readline()
+        NOTIFY_TIME=int(ln.split("=")[1])
+        
         #unturned path
         ln=f.readline()
-        unturnedPath=ln.split("=")[1].rstrip()
+        UNTURNED_PATH=ln.split("=")[1].rstrip()
 
         #servers to launch array
         ln=f.readline()
-        serversToLaunch=ln.split("=")[1].split("|")
-        serversToLaunch[len(serversToLaunch)-1]=serversToLaunch[len(serversToLaunch)-1].rstrip()
+        SERVERS_TO_LAUNCH=ln.split("=")[1].split("|")
+        SERVERS_TO_LAUNCH[len(SERVERS_TO_LAUNCH)-1]=SERVERS_TO_LAUNCH[len(SERVERS_TO_LAUNCH)-1].rstrip()
 
+        #rcon port
+        ln=f.readline()
+        RCON_PORT=[]
+        for i in range(0,len(ln.split("=")[1].split("|"))):
+            RCON_PORT.append(int(ln.split("=")[1].split("|")[i]))
+
+        #rcon password
+        ln=f.readline()
+        RCON_PASSWORD=ln.split("=")[1].split("|")
+        RCON_PASSWORD[len(RCON_PASSWORD)-1]=RCON_PASSWORD[len(RCON_PASSWORD)-1].rstrip()
+        
         #use beta
         ln=f.readline()
-        useBeta=ln.split("=")[1].rstrip()
+        USE_BETA=ln.split("=")[1].rstrip()
 
         #validate updates
         ln=f.readline()
-        validateUpdates=ln.split("=")[1].rstrip()
+        VALIDATE_AT_BOOT=ln.split("=")[1].rstrip()
         
         #steam username
         ln=f.readline()
-        steamUser=ln.split("=")[1].rstrip()
+        STEAM_USER=ln.split("=")[1].rstrip()
         
         #steam password
         ln=f.readline()
-        steamPass=ln.split("=")[1].rstrip()
+        STEAM_PASS=ln.split("=")[1].rstrip()
         
         f.close()
         return False
@@ -90,9 +112,9 @@ def downloader(i):
             
     if (i=="rocket"):
         try:
-            if(useBeta=="false"):
+            if(USE_BETA=="false"):
                 urllib.urlretrieve (URL_ROCKET_STABLE, OUTPUT_ZIP_ROCKET)
-            if(useBeta=="true"):
+            if(USE_BETA=="true"):
                 urllib.urlretrieve (URL_ROCKET_BETA, OUTPUT_ZIP_ROCKET)
         except:
             err=True
@@ -113,9 +135,28 @@ def cleanUp():
     except:
         None
 
+def rconCommunicator(port,passw):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect(("127.0.0.1", port))
+    print s.recv(1024)
+    s.send(passw)
+    time.sleep(0.5)
+    s.send("\r\n")
+    time.sleep(0.5)
+    print s.recv(1024)
+    s.send("say [Manager] This server will restart in "+str(NOTIFY_TIME)+" seconds")
+    time.sleep(0.5)
+    s.send("\r\n")
+    time.sleep(0.5)
+    print s.recv(1024)
+    s.close()
+    
+
+#--MAIN FUNCTION--#
+
 def main():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.3                         ")
+    print("                          SergiX44's Rocket Manager 1.4                         ")
     print("--------------------------------------------------------------------------------\n\n")
     print("Loading config...")
     
@@ -155,10 +196,10 @@ def main():
             sys.exit(2)
             
         #launch steam cmd
-        if((not os.path.isdir(unturnedPath)) or (validateUpdates=="true")):
+        if((not os.path.isdir(UNTURNED_PATH)) or (VALIDATE_AT_BOOT=="true")):
             print("Launching steam...")
             print "--------------------------------------------------------------------------------\n\n"
-            os.system("steamcmd.exe +login "+steamUser+" "+steamPass+" +force_install_dir "+unturnedPath+" +app_update 304930 -beta preview -betapassword OPERATIONMAPLELEAF validate +exit")
+            os.system("steamcmd.exe +login "+STEAM_USER+" "+STEAM_PASS+" +force_install_dir "+UNTURNED_PATH+" +app_update 304930 -beta preview -betapassword OPERATIONMAPLELEAF validate +exit")
             print "--------------------------------------------------------------------------------\n\n"
 
         #download and extract
@@ -176,7 +217,7 @@ def main():
             print("Installing Rocket...")
             for f in os.listdir("rocket\\"):
                 src_file = os.path.join("rocket\\", f)
-                dst_file = os.path.join(unturnedPath+"\\Unturned_Data\\Managed\\", f)
+                dst_file = os.path.join(UNTURNED_PATH+"\\Unturned_Data\\Managed\\", f)
                 shutil.copyfile(src_file, dst_file)
         except IOError:
             print("Unable to install rocket! try to revalidate the installation!")
@@ -190,12 +231,12 @@ def main():
 
         #launching servers
         print("Launching servers...")
-        for i in range(0, len(serversToLaunch)):
-            print("    - Launching "+serversToLaunch[i])
-            os.system("start "+unturnedPath+"\Unturned.exe -nographics -batchmode +secureserver/"+serversToLaunch[i])
+        for i in range(0, len(SERVERS_TO_LAUNCH)):
+            print("    - Launching "+SERVERS_TO_LAUNCH[i])
+            os.system("start "+UNTURNED_PATH+"\Unturned.exe -nographics -batchmode +secureserver/"+SERVERS_TO_LAUNCH[i])
 
         #timer
-        counter=rebootTime
+        counter=REBOOT_TIME
         while(counter>=0):
                 sys.stdout.write('Waiting %s ...\r' % str(counter))
                 sys.stdout.flush()
