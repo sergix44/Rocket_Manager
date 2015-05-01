@@ -23,8 +23,9 @@ def writeConfig(name):
     f.write("notify_before_seconds=60\n")
     f.write("unturned_folder_path=.\\unturned\n")
     f.write("servers_to_launch(separed_by_a_'|')=server1|server2\n")
-    f.write("rcon_port=27014\n")
-    f.write("rcon_password=rmanager\n")
+    f.write("enable_rcon_reboot_notify=false")
+    f.write("rcon_port(separed_by_a_'|')=27013|27014\n")
+    f.write("rcon_password(separed_by_a_'|')=rmanager|rmanager\n")
     f.write("use_rocket_beta_updates=true\n")
     f.write("update_validate(unturned_updates)=true\n")
     f.write("steam_username=changeme\n")
@@ -35,6 +36,7 @@ def loadConfig(name):
     global REBOOT_TIME
     global NOTIFY_TIME
     global SERVERS_TO_LAUNCH
+    global RCON_ENABLED
     global RCON_PORT
     global RCON_PASSWORD
     global UNTURNED_PATH
@@ -57,6 +59,8 @@ def loadConfig(name):
         #notify time
         ln=f.readline()
         NOTIFY_TIME=int(ln.split("=")[1])
+        if(NOTIFY_TIME>REBOOT_TIME):
+            NOTIFY_TIME=REBOOT_TIME
         
         #unturned path
         ln=f.readline()
@@ -67,6 +71,10 @@ def loadConfig(name):
         SERVERS_TO_LAUNCH=ln.split("=")[1].split("|")
         SERVERS_TO_LAUNCH[len(SERVERS_TO_LAUNCH)-1]=SERVERS_TO_LAUNCH[len(SERVERS_TO_LAUNCH)-1].rstrip()
 
+        #rcon enabled
+        ln=f.readline()
+        RCON_ENABLED=ln.split("=")[1].rstrip()
+        
         #rcon port
         ln=f.readline()
         RCON_PORT=[]
@@ -135,7 +143,7 @@ def cleanUp():
     except:
         None
 
-def rconCommunicator(port,passw):
+def rconNotify(port,passw):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect(("127.0.0.1", port))
     print s.recv(1024)
@@ -242,6 +250,13 @@ def main():
                 sys.stdout.flush()
                 time.sleep(1)
                 counter-=1
+                if(RCON_ENABLED=="true"):
+                    try:
+                        if(counter==NOTIFY_TIME):
+                            for i in range(0,len(RCON_PORT)):
+                                rconNotify(RCON_PORT[i],RCON_PASSWORD[i])
+                    except:
+                        print("Impossible notify the reboot! Check you config")
 
         os.system("taskkill /f /im "+PROCNAME)
 
