@@ -23,7 +23,7 @@ def writeConfig(name):
     f.write("notify_before_seconds=60\n")
     f.write("unturned_folder_path=.\\unturned\n")
     f.write("servers_to_launch(separed_by_a_'|')=server1|server2\n")
-    f.write("enable_rcon_reboot_notify=false")
+    f.write("enable_rcon_reboot_notify=false\n")
     f.write("rcon_port(separed_by_a_'|')=27013|27014\n")
     f.write("rcon_password(separed_by_a_'|')=rmanager|rmanager\n")
     f.write("use_rocket_beta_updates=true\n")
@@ -256,7 +256,7 @@ def main():
                             for i in range(0,len(RCON_PORT)):
                                 rconNotify(RCON_PORT[i],RCON_PASSWORD[i])
                     except:
-                        print("Impossible notify the reboot! Check you config")
+                        print("Unable to notify the reboot! Check you config!")
 
         os.system("taskkill /f /im "+PROCNAME)
 
