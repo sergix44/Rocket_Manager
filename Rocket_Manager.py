@@ -5,11 +5,10 @@ import urllib
 import zipfile
 import shutil
 import socket
-import apikey
 
 #--Constants
-URL_ROCKET_STABLE="http://api.rocket.foundation/release/latest/"+apikey.key
-URL_ROCKET_BETA="http://api.rocket.foundation/beta/latest/"+apikey.key
+URL_ROCKET_STABLE="http://api.rocket.foundation/release/latest/"
+URL_ROCKET_BETA="http://api.rocket.foundation/beta/latest/"
 URL_STEAM="http://media.steampowered.com/installer/steamcmd.zip"
 
 OUTPUT_ZIP_STEAM="steam_temp.zip"
@@ -30,6 +29,7 @@ def writeConfig(name):
     f.write("update_validate(unturned_updates)=true\n")
     f.write("steam_username=changeme\n")
     f.write("steam_password=changeme\n")
+    f.write("rocket_api_key=changeme\n")
     f.close()
 
 def loadConfig(name):
@@ -44,6 +44,7 @@ def loadConfig(name):
     global VALIDATE_AT_BOOT
     global STEAM_USER
     global STEAM_PASS
+    global APIKEY
     
     if (not os.path.isfile(name)):
         writeConfig(name)
@@ -101,6 +102,10 @@ def loadConfig(name):
         #steam password
         ln=f.readline()
         STEAM_PASS=ln.split("=")[1].rstrip()
+
+        #rocket apikey
+        ln=f.readline()
+        APIKEY=ln.split("=")[1].rstrip()
         
         f.close()
         return False
@@ -121,9 +126,9 @@ def downloader(i):
     if (i=="rocket"):
         try:
             if(USE_BETA=="false"):
-                urllib.urlretrieve (URL_ROCKET_STABLE, OUTPUT_ZIP_ROCKET)
+                urllib.urlretrieve (URL_ROCKET_STABLE+APIKEY, OUTPUT_ZIP_ROCKET)
             if(USE_BETA=="true"):
-                urllib.urlretrieve (URL_ROCKET_BETA, OUTPUT_ZIP_ROCKET)
+                urllib.urlretrieve (URL_ROCKET_BETA+APIKEY, OUTPUT_ZIP_ROCKET)
         except:
             err=True
     return err
@@ -146,25 +151,55 @@ def cleanUp():
 def rconNotify(port,passw):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect(("127.0.0.1", port))
-    print s.recv(1024)
+    s.recv(1024)
     s.send(passw)
     time.sleep(0.5)
     s.send("\r\n")
     time.sleep(0.5)
-    print s.recv(1024)
+    s.recv(1024)
     s.send("say [Manager] This server will restart in "+str(NOTIFY_TIME)+" seconds")
     time.sleep(0.5)
     s.send("\r\n")
     time.sleep(0.5)
-    print s.recv(1024)
+    s.recv(1024)
+    s.close()
+
+def rconShutdown(port,passw):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect(("127.0.0.1", port))
+    s.recv(1024)
+    
+    s.send(passw)
+    time.sleep(0.5)
+    s.send("\r\n")
+    time.sleep(0.5)
+    s.recv(1024)
+    
+    s.send("say Rebooting...")
+    time.sleep(0.5)
+    s.send("\r\n")
+    time.sleep(0.5)
+    s.recv(1024)
+    
+    s.send("save")
+    time.sleep(0.5)
+    s.send("\r\n")
+    time.sleep(0.5)
+    s.recv(1024)
+
+    s.send("shutdown")
+    time.sleep(0.5)
+    s.send("\r\n")
+    time.sleep(0.5)
+    s.recv(1024)
+
     s.close()
     
-
 #--MAIN FUNCTION--#
 
 def main():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.4                         ")
+    print("                          SergiX44's Rocket Manager 1.5                         ")
     print("--------------------------------------------------------------------------------\n\n")
     print("Loading config...")
     
@@ -255,10 +290,19 @@ def main():
                         if(counter==NOTIFY_TIME):
                             for i in range(0,len(RCON_PORT)):
                                 rconNotify(RCON_PORT[i],RCON_PASSWORD[i])
+                                print("Reboot Notified on port "+str(RCON_PORT[i]))
                     except:
                         print("Unable to notify the reboot! Check you config!")
-
-        os.system("taskkill /f /im "+PROCNAME)
+                        
+        if(False):
+            try:
+                for i in range(0,len(RCON_PORT)):
+                    rconShutdown(RCON_PORT[i],RCON_PASSWORD[i])
+            except:
+                print("Impossible stopping the server using rcon, using the classic method...")
+                os.system("taskkill /f /im "+PROCNAME)
+        else:      
+            os.system("taskkill /f /im "+PROCNAME)
 
 
 
