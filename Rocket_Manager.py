@@ -276,7 +276,7 @@ def main():
         print("Launching servers...")
         for i in range(0, len(SERVERS_TO_LAUNCH)):
             print("    - Launching "+SERVERS_TO_LAUNCH[i])
-            os.system("start "+UNTURNED_PATH+"\Unturned.exe -nographics -batchmode +secureserver/"+SERVERS_TO_LAUNCH[i])
+            os.system("cd "+UNTURNED_PATH+"\ & start Unturned.exe -nographics -batchmode +secureserver/"+SERVERS_TO_LAUNCH[i])
 
         #timer
         counter=REBOOT_TIME
