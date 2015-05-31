@@ -28,14 +28,10 @@ def writeConfig(name):
 	<rocket updateBranch="release" apikey=""/>
 	<steam username="" password="" />
 	<steamUpdates validate="true" />
-	<servers>
-		<server name="server1" />
-		<server name="server2" />
+	<servers rconEnabled="false">
+		<server name="server1" rconPort="27013" rconPassword="pass" />
+		<server name="server2" rconPort="27014" rconPassword="pass" />
 	</servers>
-	<rcon enabled="false">
-		<serverRcon port="27013" password="pass" />
-		<serverRcon port="27014" password="pass" />
-	</rcon>
 	<notifyBefore seconds="60" />
 </config>''')
     f.close()
@@ -80,17 +76,15 @@ def loadConfig(name):
         VALIDATE_AT_BOOT = node.attrib.get("validate")
 
         SERVERS_TO_LAUNCH = []
-        for node in tree.iter("server"):
-            SERVERS_TO_LAUNCH.append(node.attrib.get("name"))
-
         RCON_PASSWORD = []
         RCON_PORT = []
-        for node in tree.iter("serverRcon"):
-            RCON_PORT.append(int(node.attrib.get("port")))
-            RCON_PASSWORD.append(node.attrib.get("password"))
+        for node in tree.iter("server"):
+            SERVERS_TO_LAUNCH.append(node.attrib.get("name"))
+            RCON_PORT.append(int(node.attrib.get("rconPort")))
+            RCON_PASSWORD.append(node.attrib.get("rconPassword"))
 
-        node = tree.find("rcon")
-        RCON_ENABLED = node.attrib.get("enabled")
+        node = tree.find("servers")
+        RCON_ENABLED = node.attrib.get("rconEnabled")
 
         node = tree.find("notifyBefore")
         NOTIFY_TIME = int(node.attrib.get("seconds"))
