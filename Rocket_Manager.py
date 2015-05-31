@@ -5,10 +5,12 @@ import urllib
 import zipfile
 import shutil
 import socket
+from xml.etree import ElementTree
 
 # --Constants
 URL_ROCKET_STABLE = "http://api.rocket.foundation/release/latest/"
 URL_ROCKET_BETA = "http://api.rocket.foundation/beta/latest/"
+URL_ROCKET_LINUX = "http://api.rocket.foundation/linux-beta/latest/"
 URL_STEAM = "http://media.steampowered.com/installer/steamcmd.zip"
 
 OUTPUT_ZIP_STEAM = "steam_temp.zip"
@@ -18,19 +20,24 @@ PROCNAME = "Unturned.exe"
 
 
 def writeConfig(name):
-    f = open(name, "w")
-    f.write("reboot_after_seconds=3600\n")
-    f.write("notify_before_seconds=60\n")
-    f.write("unturned_folder_path=.\\unturned\n")
-    f.write("servers_to_launch(separed_by_a_'|')=server1|server2\n")
-    f.write("enable_rcon_reboot_notify=false\n")
-    f.write("rcon_port(separed_by_a_'|')=27013|27014\n")
-    f.write("rcon_password(separed_by_a_'|')=rmanager|rmanager\n")
-    f.write("use_rocket_beta_updates=true\n")
-    f.write("update_validate(unturned_updates)=true\n")
-    f.write("steam_username=changeme\n")
-    f.write("steam_password=changeme\n")
-    f.write("rocket_api_key=changeme\n")
+    f=open(name,"w")
+    f.write('''<?xml version="1.0" encoding="UTF-8"?>
+<config>
+	<rebootEvery seconds="3600" />
+	<unturnedFolder path=".\unturned" />
+	<rocket updateBranch="release" apikey=""/>
+	<steam username="" password="" />
+	<steamUpdates validate="true" />
+	<servers>
+		<server name="server1" />
+		<server name="server2" />
+	</servers>
+	<rcon enabled="false">
+		<serverRcon port="27013" password="pass" />
+		<serverRcon port="27014" password="pass" />
+	</rcon>
+	<notifyBefore seconds="60" />
+</config>''')
     f.close()
 
 
@@ -42,7 +49,7 @@ def loadConfig(name):
     global RCON_PORT
     global RCON_PASSWORD
     global UNTURNED_PATH
-    global USE_BETA
+    global UPDATE_BRANCH
     global VALIDATE_AT_BOOT
     global STEAM_USER
     global STEAM_PASS
@@ -51,65 +58,44 @@ def loadConfig(name):
     if (not os.path.isfile(name)):
         writeConfig(name)
         return True
-
     try:
-        f = open(name, "r")
+        with open(name, 'rt') as f:
+            tree = ElementTree.parse(f)
 
-        #reboot time
-        ln = f.readline()
-        REBOOT_TIME = int(ln.split("=")[1])
+        node = tree.find("rebootEvery")
+        REBOOT_TIME = int(node.attrib.get("seconds"))
 
-        #notify time
-        ln = f.readline()
-        NOTIFY_TIME = int(ln.split("=")[1])
+        node = tree.find("unturnedFolder")
+        UNTURNED_PATH = node.attrib.get("path")
+
+        node = tree.find("rocket")
+        APIKEY = node.attrib.get("apikey")
+        UPDATE_BRANCH = node.attrib.get("updateBranch")
+
+        node = tree.find("steam")
+        STEAM_USER = node.attrib.get("username")
+        STEAM_PASS = node.attrib.get("password")
+
+        node = tree.find("steamUpdates")
+        VALIDATE_AT_BOOT = node.attrib.get("validate")
+
+        SERVERS_TO_LAUNCH = []
+        for node in tree.iter("server"):
+            SERVERS_TO_LAUNCH.append(node.attrib.get("name"))
+
+        RCON_PASSWORD = []
+        RCON_PORT = []
+        for node in tree.iter("serverRcon"):
+            RCON_PORT.append(int(node.attrib.get("port")))
+            RCON_PASSWORD.append(node.attrib.get("password"))
+
+        node = tree.find("rcon")
+        RCON_ENABLED = node.attrib.get("enabled")
+
+        node = tree.find("notifyBefore")
+        NOTIFY_TIME = int(node.attrib.get("seconds"))
         if (NOTIFY_TIME > REBOOT_TIME):
             NOTIFY_TIME = REBOOT_TIME
-
-        #unturned path
-        ln = f.readline()
-        UNTURNED_PATH = ln.split("=")[1].rstrip()
-
-        #servers to launch array
-        ln = f.readline()
-        SERVERS_TO_LAUNCH = ln.split("=")[1].split("|")
-        SERVERS_TO_LAUNCH[len(SERVERS_TO_LAUNCH) - 1] = SERVERS_TO_LAUNCH[len(SERVERS_TO_LAUNCH) - 1].rstrip()
-
-        #rcon enabled
-        ln = f.readline()
-        RCON_ENABLED = ln.split("=")[1].rstrip()
-
-        #rcon port
-        ln = f.readline()
-        RCON_PORT = []
-        for i in range(0, len(ln.split("=")[1].split("|"))):
-            RCON_PORT.append(int(ln.split("=")[1].split("|")[i]))
-
-        #rcon password
-        ln = f.readline()
-        RCON_PASSWORD = ln.split("=")[1].split("|")
-        RCON_PASSWORD[len(RCON_PASSWORD) - 1] = RCON_PASSWORD[len(RCON_PASSWORD) - 1].rstrip()
-
-        #use beta
-        ln = f.readline()
-        USE_BETA = ln.split("=")[1].rstrip()
-
-        #validate updates
-        ln = f.readline()
-        VALIDATE_AT_BOOT = ln.split("=")[1].rstrip()
-
-        #steam username
-        ln = f.readline()
-        STEAM_USER = ln.split("=")[1].rstrip()
-
-        #steam password
-        ln = f.readline()
-        STEAM_PASS = ln.split("=")[1].rstrip()
-
-        #rocket apikey
-        ln = f.readline()
-        APIKEY = ln.split("=")[1].rstrip()
-
-        f.close()
         return False
 
     except:
@@ -127,10 +113,12 @@ def downloader(i):
 
     if (i == "rocket"):
         try:
-            if (USE_BETA == "false"):
+            if (UPDATE_BRANCH == "release"):
                 urllib.urlretrieve(URL_ROCKET_STABLE + APIKEY, OUTPUT_ZIP_ROCKET)
-            if (USE_BETA == "true"):
+            if (UPDATE_BRANCH == "beta"):
                 urllib.urlretrieve(URL_ROCKET_BETA + APIKEY, OUTPUT_ZIP_ROCKET)
+            if (UPDATE_BRANCH == "linux"):
+                urllib.urlretrieve(URL_ROCKET_LINUX + APIKEY, OUTPUT_ZIP_ROCKET)
         except:
             err = True
     return err
@@ -152,6 +140,16 @@ def cleanUp():
     except:
         None
 
+def installer():
+    try:
+        for f in os.listdir("rocket\\"):
+            if(not os.path.isdir(f)):
+                src_file = os.path.join("rocket\\", f)
+                dst_file = os.path.join(UNTURNED_PATH + "\\Unturned_Data\\Managed\\", f)
+                shutil.copyfile(src_file, dst_file)
+                return False
+    except IOError:
+        return True
 
 def rconNotify(port, passw):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -204,8 +202,8 @@ def main():
     print("--------------------------------------------------------------------------------\n\n")
     print("Loading config...")
 
-    if (loadConfig("config.properties")):
-        print("Close and edit config.properties, then restart me!")
+    if (loadConfig("config_RocketManager.xml")):
+        print("Close and edit config_RocketManager.xml, then restart me!")
         raw_input("Press any key to continue...")
         sys.exit(1)
 
@@ -233,8 +231,8 @@ def main():
 
     while 1:
         #reloading config
-        if (loadConfig("config.properties")):
-            print("Failed loading config! :( \nConfig file regenerated, edit config.properties, then restart me!")
+        if (loadConfig("config_RocketManager.xml")):
+            print("Failed loading config! :( \nConfig file regenerated, edit config_RocketManager.xml, then restart me!")
             raw_input("Press any key to continue...")
             sys.exit(2)
 
@@ -257,13 +255,8 @@ def main():
         extractor(OUTPUT_ZIP_ROCKET)
 
         #Moving files
-        try:
-            print("Installing Rocket...")
-            for f in os.listdir("rocket\\"):
-                src_file = os.path.join("rocket\\", f)
-                dst_file = os.path.join(UNTURNED_PATH + "\\Unturned_Data\\Managed\\", f)
-                shutil.copyfile(src_file, dst_file)
-        except IOError:
+        print("Installing Rocket...")
+        if (installer()):
             print("Unable to install rocket! try to revalidate the installation!")
             cleanUp()
             raw_input("Press any key to continue...")
