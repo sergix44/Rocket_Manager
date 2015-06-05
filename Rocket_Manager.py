@@ -5,18 +5,28 @@ import urllib
 import zipfile
 import shutil
 import socket
+import platform
 from xml.etree import ElementTree
 
 # --Constants
+
+#For Win
 URL_ROCKET_STABLE = "http://api.rocket.foundation/release/latest/"
 URL_ROCKET_BETA = "http://api.rocket.foundation/beta/latest/"
-URL_ROCKET_LINUX = "http://api.rocket.foundation/linux-beta/latest/"
-URL_STEAM = "http://media.steampowered.com/installer/steamcmd.zip"
 
-OUTPUT_ZIP_STEAM = "steam_temp.zip"
+URL_STEAM_WIN = "http://media.steampowered.com/installer/steamcmd.zip"
+
+OUTPUT_ZIP_STEAM_WIN = "steam_temp.zip"
 OUTPUT_ZIP_ROCKET = "rocket_temp.zip"
 
-PROCNAME = "Unturned.exe"
+#For Linux
+
+URL_ROCKET_LINUX = "http://api.rocket.foundation/linux-beta/latest/"
+URL_STEAM_LINUX = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz"
+
+OUTPUT_ZIP_STEAM_WIN = "steam_temp.zip"
+
+PROCNAME_WIN = "Unturned.exe"
 
 
 def writeConfig(name):
@@ -101,7 +111,11 @@ def downloader(i):
     err = False
     if (i == "steam"):
         try:
-            urllib.urlretrieve(URL_STEAM, OUTPUT_ZIP_STEAM)
+            if(platform.system()=="Windows"):
+                urllib.urlretrieve(URL_STEAM_WIN, OUTPUT_ZIP_STEAM_WIN)
+            else:
+                urllib.urlretrieve(URL_STEAM_LINUX, OUTPUT_ZIP_STEAM_WIN)
+
         except:
             err = True
 
@@ -130,7 +144,7 @@ def cleanUp():
     try:
         shutil.rmtree("rocket")
         os.remove(OUTPUT_ZIP_ROCKET)
-        os.remove(OUTPUT_ZIP_STEAM)
+        os.remove(OUTPUT_ZIP_STEAM_WIN)
     except:
         None
 
@@ -213,7 +227,7 @@ def main():
                     raw_input("Press any key to continue...")
                     sys.exit(3)
 
-                zfile = zipfile.ZipFile(OUTPUT_ZIP_STEAM)
+                zfile = zipfile.ZipFile(OUTPUT_ZIP_STEAM_WIN)
                 zfile.extractall()
                 zfile.close()
                 ex = False
@@ -290,9 +304,9 @@ def main():
                     rconShutdown(RCON_PORT[i], RCON_PASSWORD[i])
             except:
                 print("Unable to stopping the server using rcon, using the classic method...")
-                os.system("taskkill /f /im " + PROCNAME)
+                os.system("taskkill /f /im " + PROCNAME_WIN)
         else:
-            os.system("taskkill /f /im " + PROCNAME)
+            os.system("taskkill /f /im " + PROCNAME_WIN)
 
 
 if (__name__ == '__main__'):
