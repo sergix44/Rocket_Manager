@@ -1,3 +1,4 @@
+from xml.etree import ElementTree
 import sys
 import time
 import os
@@ -6,7 +7,7 @@ import zipfile
 import shutil
 import socket
 import platform
-from xml.etree import ElementTree
+
 
 # --Constants
 
@@ -28,7 +29,7 @@ OUTPUT_ZIP_STEAM_WIN = "steam_temp.zip"
 
 PROCNAME_WIN = "Unturned.exe"
 
-
+#--Functions
 def writeConfig(name):
     f=open(name,"w")
     f.write('''<?xml version="1.0" encoding="UTF-8"?>
@@ -151,11 +152,11 @@ def cleanUp():
 def installer():
     try:
         for f in os.listdir("rocket\\"):
-            if(not os.path.isdir(f)):
+            if(not os.path.isdir(os.path.join("rocket\\", f))):
                 src_file = os.path.join("rocket\\", f)
                 dst_file = os.path.join(UNTURNED_PATH + "\\Unturned_Data\\Managed\\", f)
                 shutil.copyfile(src_file, dst_file)
-                return False
+        return False
     except IOError:
         return True
 
@@ -174,6 +175,7 @@ def rconNotify(port, passw):
     time.sleep(0.2)
     s.recv(2048)
     s.close()
+
 
 
 def rconShutdown(port, passw):
@@ -206,7 +208,7 @@ def rconShutdown(port, passw):
 
 def main():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.6                         ")
+    print("                          SergiX44's Rocket Manager 1.6.1                       ")
     print("--------------------------------------------------------------------------------\n\n")
     print("Loading config...")
 
@@ -247,10 +249,10 @@ def main():
         #launch steam cmd
         if ((not os.path.isdir(UNTURNED_PATH)) or (VALIDATE_AT_BOOT == "true")):
             print("Launching steam...")
-            print "--------------------------------------------------------------------------------\n\n"
+            print ("--------------------------------------------------------------------------------\n\n")
             os.system(
                 "steamcmd.exe +login " + STEAM_USER + " " + STEAM_PASS + " +force_install_dir " + UNTURNED_PATH + " +app_update 304930 -beta preview -betapassword OPERATIONMAPLELEAF validate +exit")
-            print "--------------------------------------------------------------------------------\n\n"
+            print ("--------------------------------------------------------------------------------\n\n")
 
         #download and extract
         print("Downloading rocket...")
