@@ -11,7 +11,7 @@ import platform
 
 # --Constants
 
-#For Win
+# For Win
 URL_ROCKET_STABLE = "http://api.rocket.foundation/release/latest/"
 URL_ROCKET_BETA = "http://api.rocket.foundation/beta/latest/"
 
@@ -25,13 +25,11 @@ OUTPUT_ZIP_ROCKET = "rocket_temp.zip"
 URL_ROCKET_LINUX = "http://api.rocket.foundation/linux-beta/latest/"
 URL_STEAM_LINUX = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz"
 
-OUTPUT_ZIP_STEAM_WIN = "steam_temp.zip"
-
 PROCNAME_WIN = "Unturned.exe"
 
 #--Functions
 def writeConfig(name):
-    f=open(name,"w")
+    f = open(name, "w")
     f.write('''<?xml version="1.0" encoding="UTF-8"?>
 <config>
 	<rebootEvery seconds="3600" />
@@ -112,7 +110,7 @@ def downloader(i):
     err = False
     if (i == "steam"):
         try:
-            if(platform.system()=="Windows"):
+            if (platform.system() == "Windows"):
                 urllib.urlretrieve(URL_STEAM_WIN, OUTPUT_ZIP_STEAM_WIN)
             else:
                 urllib.urlretrieve(URL_STEAM_LINUX, OUTPUT_ZIP_STEAM_WIN)
@@ -149,16 +147,18 @@ def cleanUp():
     except:
         None
 
+
 def installer():
     try:
         for f in os.listdir("rocket\\"):
-            if(not os.path.isdir(os.path.join("rocket\\", f))):
+            if (not os.path.isdir(os.path.join("rocket\\", f))):
                 src_file = os.path.join("rocket\\", f)
                 dst_file = os.path.join(UNTURNED_PATH + "\\Unturned_Data\\Managed\\", f)
                 shutil.copyfile(src_file, dst_file)
         return False
     except IOError:
         return True
+
 
 def rconNotify(port, passw):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -175,7 +175,6 @@ def rconNotify(port, passw):
     time.sleep(0.2)
     s.recv(2048)
     s.close()
-
 
 
 def rconShutdown(port, passw):
@@ -208,7 +207,7 @@ def rconShutdown(port, passw):
 
 def main():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.6.1                       ")
+    print("                          SergiX44's Rocket Manager 1.6.2                       ")
     print("--------------------------------------------------------------------------------\n\n")
     print("Loading config...")
 
@@ -265,12 +264,16 @@ def main():
         extractor(OUTPUT_ZIP_ROCKET)
 
         #Moving files
-        print("Installing Rocket...")
+        print("Installing rocket...")
         if (installer()):
-            print("Unable to install rocket! try to revalidate the installation!")
+            print("Error installing rocket, looking for opened game instances...")
+            os.system("taskkill /f /im " + PROCNAME_WIN)
             cleanUp()
-            raw_input("Press any key to continue...")
-            sys.exit(4)
+            if(installer()):
+                print("Unable to install rocket! try to revalidate the installation!")
+                cleanUp()
+                raw_input("Press any key to continue...")
+                sys.exit(4)
 
         #clean up zips and extracted files
         print("Cleaning up...")
@@ -290,15 +293,13 @@ def main():
             sys.stdout.flush()
             time.sleep(1)
             counter -= 1
-            if (RCON_ENABLED == "true"):
-                    if (counter == NOTIFY_TIME):
-                        for i in range(0, len(RCON_PORT)):
-                            try:
-                                rconNotify(RCON_PORT[i], RCON_PASSWORD[i])
-                                print("    -Reboot Notified on port " + str(RCON_PORT[i]))
-                            except:
-                                print("Unable to notify the reboot on port "+str(RCON_PORT[i])+"! Check your config!")
-
+            if (RCON_ENABLED == "true") and (counter == NOTIFY_TIME):
+                for i in range(0, len(RCON_PORT)):
+                    try:
+                        rconNotify(RCON_PORT[i], RCON_PASSWORD[i])
+                        print("    -Reboot Notified on port " + str(RCON_PORT[i]))
+                    except:
+                        print("Unable to notify the reboot on port " + str(RCON_PORT[i]) + "! Check your config!")
 
         if (RCON_ENABLED == "true"):
             try:
