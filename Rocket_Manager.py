@@ -253,13 +253,14 @@ def main():
                 "steamcmd.exe +login " + STEAM_USER + " " + STEAM_PASS + " +force_install_dir " + UNTURNED_PATH + " +app_update 304930 -beta preview -betapassword OPERATIONMAPLELEAF validate +exit")
             print ("--------------------------------------------------------------------------------\n\n")
 
-        #download and extract
+        #download
         print("Downloading rocket...")
         if (downloader("rocket")):
             print("ERROR: Unable to download rocket! Please check your internet settings!")
             raw_input("Press any key to continue...")
             sys.exit(3)
 
+        #extract
         print("Extracting rocket...")
         extractor(OUTPUT_ZIP_ROCKET)
 
@@ -268,7 +269,7 @@ def main():
         if (installer()):
             print("Error installing rocket, looking for opened game instances...")
             os.system("taskkill /f /im " + PROCNAME_WIN)
-            cleanUp()
+            time.sleep(1)
             if(installer()):
                 print("Unable to install rocket! try to revalidate the installation!")
                 cleanUp()
