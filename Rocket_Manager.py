@@ -11,14 +11,18 @@ import platform
 
 # --Constants
 
+MANAGER_FOLDER = "_RocketManager\\"
+
+ROCKET_EXTRACT_FOLDER = MANAGER_FOLDER+"last_rocket_download"
+
 # For Win
 URL_ROCKET_STABLE = "http://api.rocket.foundation/release/latest/"
 URL_ROCKET_BETA = "http://api.rocket.foundation/beta/latest/"
 
 URL_STEAM_WIN = "http://media.steampowered.com/installer/steamcmd.zip"
 
-OUTPUT_ZIP_STEAM_WIN = "steam_temp.zip"
-OUTPUT_ZIP_ROCKET = "rocket_temp.zip"
+OUTPUT_ZIP_STEAM_WIN = MANAGER_FOLDER+"steam_temp.zip"
+OUTPUT_ZIP_ROCKET = MANAGER_FOLDER+"rocket_temp.zip"
 
 #For Linux
 
@@ -28,7 +32,7 @@ URL_STEAM_LINUX = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_lin
 PROCNAME_WIN = "Unturned.exe"
 
 #--Functions
-def writeConfig(name):
+def write_config(name):
     f = open(name, "w")
     f.write('''<?xml version="1.0" encoding="UTF-8"?>
 <config>
@@ -46,7 +50,7 @@ def writeConfig(name):
     f.close()
 
 
-def loadConfig(name):
+def load_config(name):
     global REBOOT_TIME
     global NOTIFY_TIME
     global SERVERS_TO_LAUNCH
@@ -61,7 +65,7 @@ def loadConfig(name):
     global APIKEY
 
     if (not os.path.isfile(name)):
-        writeConfig(name)
+        write_config(name)
         return True
     try:
         with open(name, 'rt') as f:
@@ -102,7 +106,7 @@ def loadConfig(name):
         return False
 
     except:
-        writeConfig(name)
+        write_config(name)
         return True
 
 
@@ -131,28 +135,27 @@ def downloader(i):
     return err
 
 
-def extractor(name):
-    zfile = zipfile.ZipFile(name)
-    if not os.path.exists("rocket"):
-        os.makedirs("rocket")
-    zfile.extractall("rocket")
+def extractor(namezip, folder):
+    zfile = zipfile.ZipFile(namezip)
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    zfile.extractall(folder)
     zfile.close()
 
 
-def cleanUp():
+def clean_up():
     try:
-        shutil.rmtree("rocket")
         os.remove(OUTPUT_ZIP_ROCKET)
         os.remove(OUTPUT_ZIP_STEAM_WIN)
     except:
-        None
+        pass
 
 
-def installer():
+def installer(folder):
     try:
-        for f in os.listdir("rocket\\"):
-            if (not os.path.isdir(os.path.join("rocket\\", f))):
-                src_file = os.path.join("rocket\\", f)
+        for f in os.listdir(folder):
+            if (not os.path.isdir(os.path.join(folder, f))):
+                src_file = os.path.join(folder, f)
                 dst_file = os.path.join(UNTURNED_PATH + "\\Unturned_Data\\Managed\\", f)
                 shutil.copyfile(src_file, dst_file)
         return False
@@ -160,7 +163,7 @@ def installer():
         return True
 
 
-def rconNotify(port, passw):
+def rcon_notify(port, passw):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect(("127.0.0.1", port))
     s.recv(2048)
@@ -177,7 +180,7 @@ def rconNotify(port, passw):
     s.close()
 
 
-def rconShutdown(port, passw):
+def rcon_shutdown(port, passw):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect(("127.0.0.1", port))
     s.recv(2048)
@@ -207,11 +210,14 @@ def rconShutdown(port, passw):
 
 def main():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.6.2                       ")
+    print("                          SergiX44's Rocket Manager 1.7                       ")
     print("--------------------------------------------------------------------------------\n\n")
     print("Loading config...")
 
-    if (loadConfig("config_RocketManager.xml")):
+    if not os.path.exists(MANAGER_FOLDER):
+        os.makedirs(MANAGER_FOLDER)
+
+    if (load_config(MANAGER_FOLDER+"config_RocketManager.xml")):
         print("Close and edit config_RocketManager.xml, then restart me!")
         raw_input("Press any key to continue...")
         sys.exit(1)
@@ -221,7 +227,6 @@ def main():
         while (ex):
             sel = raw_input("SteamCMD not found! Would you like download it? (y/n) ")
             if (sel == "y"):
-
                 print("Downloading steamcmd...")
                 if (downloader("steam")):
                     print("ERROR: Unable to download steam! Please check your internet settings!")
@@ -240,7 +245,7 @@ def main():
 
     while 1:
         #reloading config
-        if (loadConfig("config_RocketManager.xml")):
+        if (load_config(MANAGER_FOLDER+"config_RocketManager.xml")):
             print("Failed loading config! :( \nConfig file regenerated, edit config_RocketManager.xml, then restart me!")
             raw_input("Press any key to continue...")
             sys.exit(2)
@@ -254,31 +259,53 @@ def main():
             print ("--------------------------------------------------------------------------------\n\n")
 
         #download
+        '''
         print("Downloading rocket...")
         if (downloader("rocket")):
             print("ERROR: Unable to download rocket! Please check your internet settings!")
             raw_input("Press any key to continue...")
             sys.exit(3)
-
+        '''
         #extract
         print("Extracting rocket...")
-        extractor(OUTPUT_ZIP_ROCKET)
+        rocket_downloaded = True
+        correct_opened = True
+        checkzip = None
+        try:
+            zip = zipfile.ZipFile(OUTPUT_ZIP_ROCKET)
+            checkzip = zip.testzip()
+        except zipfile.BadZipfile:
+            correct_opened = False
+        if ((checkzip is None) and correct_opened):
+            if os.path.exists(ROCKET_EXTRACT_FOLDER):
+                shutil.rmtree(ROCKET_EXTRACT_FOLDER)
+            extractor(OUTPUT_ZIP_ROCKET, ROCKET_EXTRACT_FOLDER)
+        else:
+            print("Failed to extract Rocket zip (maybe a malformed zip?)")
+            if(os.listdir(ROCKET_EXTRACT_FOLDER)):
+                print("Using the lastest correct download...")
+            else:
+                print("Not failover found, launching servers...")
+                rocket_downloaded = False
+
+
 
         #Moving files
-        print("Installing rocket...")
-        if (installer()):
-            print("Error installing rocket, looking for opened game instances...")
-            os.system("taskkill /f /im " + PROCNAME_WIN)
-            time.sleep(1)
-            if(installer()):
-                print("Unable to install rocket! try to revalidate the installation!")
-                cleanUp()
-                raw_input("Press any key to continue...")
-                sys.exit(4)
+        if(rocket_downloaded):
+            print("Installing rocket...")
+            if (installer(ROCKET_EXTRACT_FOLDER)):
+                print("Error installing rocket, looking for opened game instances...")
+                os.system("taskkill /f /im " + PROCNAME_WIN)
+                time.sleep(1)
+                if(installer(ROCKET_EXTRACT_FOLDER)):
+                    print("Unable to install rocket! try to revalidate the installation!")
+                    clean_up()
+                    raw_input("Press any key to continue...")
+                    sys.exit(4)
 
         #clean up zips and extracted files
         print("Cleaning up...")
-        cleanUp()
+        clean_up()
 
         #launching servers
         print("Launching servers...")
@@ -297,7 +324,7 @@ def main():
             if (RCON_ENABLED == "true") and (counter == NOTIFY_TIME):
                 for i in range(0, len(RCON_PORT)):
                     try:
-                        rconNotify(RCON_PORT[i], RCON_PASSWORD[i])
+                        rcon_notify(RCON_PORT[i], RCON_PASSWORD[i])
                         print("    -Reboot Notified on port " + str(RCON_PORT[i]))
                     except:
                         print("Unable to notify the reboot on port " + str(RCON_PORT[i]) + "! Check your config!")
@@ -305,7 +332,7 @@ def main():
         if (RCON_ENABLED == "true"):
             try:
                 for i in range(0, len(RCON_PORT)):
-                    rconShutdown(RCON_PORT[i], RCON_PASSWORD[i])
+                    rcon_shutdown(RCON_PORT[i], RCON_PASSWORD[i])
             except:
                 print("Unable to stopping the server using rcon, using the classic method...")
                 os.system("taskkill /f /im " + PROCNAME_WIN)
