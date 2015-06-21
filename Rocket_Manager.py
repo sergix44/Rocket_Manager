@@ -259,13 +259,12 @@ def main():
             print ("--------------------------------------------------------------------------------\n\n")
 
         #download
-        '''
         print("Downloading rocket...")
         if (downloader("rocket")):
             print("ERROR: Unable to download rocket! Please check your internet settings!")
             raw_input("Press any key to continue...")
             sys.exit(3)
-        '''
+
         #extract
         print("Extracting rocket...")
         rocket_downloaded = True
