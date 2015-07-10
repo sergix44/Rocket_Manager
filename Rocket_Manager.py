@@ -16,9 +16,7 @@ MANAGER_FOLDER = "_RocketManager\\"
 ROCKET_EXTRACT_FOLDER = MANAGER_FOLDER+"last_rocket_download"
 
 # For Win
-URL_ROCKET_STABLE = "http://api.rocket.foundation/release/latest/"
 URL_ROCKET_BETA = "http://api.rocket.foundation/beta/latest/"
-
 URL_STEAM_WIN = "http://media.steampowered.com/installer/steamcmd.zip"
 
 OUTPUT_ZIP_STEAM_WIN = MANAGER_FOLDER+"steam_temp.zip"
@@ -38,7 +36,7 @@ def write_config(name):
 <config>
 	<rebootEvery seconds="3600" />
 	<unturnedFolder path=".\unturned" />
-	<rocket updateBranch="release" apikey=""/>
+	<rocket apikey=""/>
 	<steam username="" password="" />
 	<steamUpdates validate="true" />
 	<servers rconEnabled="false">
@@ -58,7 +56,6 @@ def load_config(name):
     global RCON_PORT
     global RCON_PASSWORD
     global UNTURNED_PATH
-    global UPDATE_BRANCH
     global VALIDATE_AT_BOOT
     global STEAM_USER
     global STEAM_PASS
@@ -79,7 +76,6 @@ def load_config(name):
 
         node = tree.find("rocket")
         APIKEY = node.attrib.get("apikey")
-        UPDATE_BRANCH = node.attrib.get("updateBranch")
 
         node = tree.find("steam")
         STEAM_USER = node.attrib.get("username")
@@ -124,11 +120,9 @@ def downloader(i):
 
     if (i == "rocket"):
         try:
-            if (UPDATE_BRANCH == "release"):
-                urllib.urlretrieve(URL_ROCKET_STABLE + APIKEY, OUTPUT_ZIP_ROCKET)
-            if (UPDATE_BRANCH == "beta"):
+            if (platform.system() == "Windows"):
                 urllib.urlretrieve(URL_ROCKET_BETA + APIKEY, OUTPUT_ZIP_ROCKET)
-            if (UPDATE_BRANCH == "linux"):
+            else:
                 urllib.urlretrieve(URL_ROCKET_LINUX + APIKEY, OUTPUT_ZIP_ROCKET)
         except:
             err = True
@@ -145,8 +139,11 @@ def extractor(namezip, folder):
 
 def clean_up():
     try:
-        os.remove(OUTPUT_ZIP_ROCKET)
         os.remove(OUTPUT_ZIP_STEAM_WIN)
+    except:
+        pass
+    try:
+        os.remove(OUTPUT_ZIP_ROCKET)
     except:
         pass
 
@@ -167,16 +164,27 @@ def rcon_notify(port, passw):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect(("127.0.0.1", port))
     s.recv(2048)
-    s.send(passw)
+    
+    s.send("login "+passw)
     time.sleep(0.2)
     s.send("\r\n")
     time.sleep(0.2)
     s.recv(2048)
+    time.sleep(0.2)
+    
     s.send("say [Manager] This server will restart in " + str(NOTIFY_TIME) + " seconds")
     time.sleep(0.2)
     s.send("\r\n")
     time.sleep(0.2)
     s.recv(2048)
+
+    s.send("quit")
+    time.sleep(0.2)
+    s.send("\r\n")
+    time.sleep(0.2)
+    s.recv(2048)
+    time.sleep(0.2)
+    
     s.close()
 
 
@@ -185,7 +193,7 @@ def rcon_shutdown(port, passw):
     s.connect(("127.0.0.1", port))
     s.recv(2048)
 
-    s.send(passw)
+    s.send("login "+passw)
     time.sleep(0.2)
     s.send("\r\n")
     time.sleep(0.2)
@@ -255,7 +263,7 @@ def main():
             print("Launching steam...")
             print ("--------------------------------------------------------------------------------\n\n")
             os.system(
-                "steamcmd.exe +login " + STEAM_USER + " " + STEAM_PASS + " +force_install_dir " + UNTURNED_PATH + " +app_update 304930 -beta preview -betapassword OPERATIONMAPLELEAF validate +exit")
+                "steamcmd.exe +login " + STEAM_USER + " " + STEAM_PASS + " +force_install_dir " + UNTURNED_PATH + " +app_update 304930 validate +exit")
             print ("--------------------------------------------------------------------------------\n\n")
 
         #download
@@ -271,8 +279,9 @@ def main():
         correct_opened = True
         checkzip = None
         try:
-            zip = zipfile.ZipFile(OUTPUT_ZIP_ROCKET)
-            checkzip = zip.testzip()
+            zzip = zipfile.ZipFile(OUTPUT_ZIP_ROCKET)
+            checkzip = zzip.testzip()
+            zzip.close()
         except zipfile.BadZipfile:
             correct_opened = False
         if ((checkzip is None) and correct_opened):
