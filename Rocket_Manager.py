@@ -218,7 +218,7 @@ def rcon_shutdown(port, passw):
 
 def main():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.7                       ")
+    print("                          SergiX44's Rocket Manager 1.7.1                       ")
     print("--------------------------------------------------------------------------------\n\n")
     print("Loading config...")
 
