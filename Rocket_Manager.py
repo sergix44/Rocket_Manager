@@ -13,14 +13,15 @@ import platform
 
 MANAGER_FOLDER = "_RocketManager\\"
 
-ROCKET_EXTRACT_FOLDER = MANAGER_FOLDER+"last_rocket_download"
+ROCKET_EXTRACT_FOLDER = MANAGER_FOLDER + "last_rocket_download"
+BACKUP_BUNDLES_FOLDER = MANAGER_FOLDER + "cpy_bundles"
 
 # For Win
 URL_ROCKET_BETA = "http://api.rocket.foundation/beta/latest/"
 URL_STEAM_WIN = "http://media.steampowered.com/installer/steamcmd.zip"
 
-OUTPUT_ZIP_STEAM_WIN = MANAGER_FOLDER+"steam_temp.zip"
-OUTPUT_ZIP_ROCKET = MANAGER_FOLDER+"rocket_temp.zip"
+OUTPUT_ZIP_STEAM_WIN = MANAGER_FOLDER + "steam_temp.zip"
+OUTPUT_ZIP_ROCKET = MANAGER_FOLDER + "rocket_temp.zip"
 
 #For Linux
 
@@ -35,7 +36,7 @@ def write_config(name):
     f.write('''<?xml version="1.0" encoding="UTF-8"?>
 <config>
 	<rebootEvery seconds="3600" />
-	<unturnedFolder path=".\unturned" />
+	<unturnedFolder path=".\unturned" recoveryBundlesAfterUpdates="false" />
 	<rocket apikey=""/>
 	<steam username="" password="" />
 	<steamUpdates validate="true" />
@@ -46,7 +47,6 @@ def write_config(name):
 	<notifyBefore seconds="60" />
 </config>''')
     f.close()
-
 
 def load_config(name):
     global REBOOT_TIME
@@ -60,6 +60,7 @@ def load_config(name):
     global STEAM_USER
     global STEAM_PASS
     global APIKEY
+    global BACKUP_BUNDLES
 
     if (not os.path.isfile(name)):
         write_config(name)
@@ -71,8 +72,14 @@ def load_config(name):
         node = tree.find("rebootEvery")
         REBOOT_TIME = int(node.attrib.get("seconds"))
 
+        node = tree.find("steamUpdates")
+        VALIDATE_AT_BOOT = node.attrib.get("validate")
+
         node = tree.find("unturnedFolder")
         UNTURNED_PATH = node.attrib.get("path")
+        BACKUP_BUNDLES = node.attrib.get("recoveryBundlesAfterUpdates")
+        if(VALIDATE_AT_BOOT != "true"):
+            BACKUP_BUNDLES = "false"
 
         node = tree.find("rocket")
         APIKEY = node.attrib.get("apikey")
@@ -81,9 +88,6 @@ def load_config(name):
         STEAM_USER = node.attrib.get("username")
         STEAM_PASS = node.attrib.get("password")
 
-        node = tree.find("steamUpdates")
-        VALIDATE_AT_BOOT = node.attrib.get("validate")
-
         SERVERS_TO_LAUNCH = []
         RCON_PASSWORD = []
         RCON_PORT = []
@@ -91,6 +95,7 @@ def load_config(name):
             SERVERS_TO_LAUNCH.append(node.attrib.get("name"))
             RCON_PORT.append(int(node.attrib.get("rconPort")))
             RCON_PASSWORD.append(node.attrib.get("rconPassword"))
+
 
         node = tree.find("servers")
         RCON_ENABLED = node.attrib.get("rconEnabled")
@@ -104,7 +109,6 @@ def load_config(name):
     except:
         write_config(name)
         return True
-
 
 def downloader(i):
     err = False
@@ -128,14 +132,12 @@ def downloader(i):
             err = True
     return err
 
-
 def extractor(namezip, folder):
     zfile = zipfile.ZipFile(namezip)
     if not os.path.exists(folder):
         os.makedirs(folder)
     zfile.extractall(folder)
     zfile.close()
-
 
 def clean_up():
     try:
@@ -146,7 +148,6 @@ def clean_up():
         os.remove(OUTPUT_ZIP_ROCKET)
     except:
         pass
-
 
 def installer(folder):
     try:
@@ -159,13 +160,12 @@ def installer(folder):
     except IOError:
         return True
 
-
 def rcon_notify(port, passw):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect(("127.0.0.1", port))
     s.recv(2048)
     
-    s.send("login "+passw)
+    s.send("login " + passw)
     time.sleep(0.2)
     s.send("\r\n")
     time.sleep(0.2)
@@ -187,13 +187,12 @@ def rcon_notify(port, passw):
     
     s.close()
 
-
 def rcon_shutdown(port, passw):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect(("127.0.0.1", port))
     s.recv(2048)
 
-    s.send("login "+passw)
+    s.send("login " + passw)
     time.sleep(0.2)
     s.send("\r\n")
     time.sleep(0.2)
@@ -201,6 +200,13 @@ def rcon_shutdown(port, passw):
     time.sleep(0.2)
 
     s.send("say Rebooting...")
+    time.sleep(0.2)
+    s.send("\r\n")
+    time.sleep(0.2)
+    s.recv(2048)
+    time.sleep(0.2)
+
+    s.send("save")
     time.sleep(0.2)
     s.send("\r\n")
     time.sleep(0.2)
@@ -215,16 +221,33 @@ def rcon_shutdown(port, passw):
 
     s.close()
 
+def merge_files(root_src_dir, root_dst_dir):
+    try:
+        for src_dir, dirs, files in os.walk(root_src_dir):
+            dst_dir = src_dir.replace(root_src_dir, root_dst_dir)
+            if not os.path.exists(dst_dir):
+                os.mkdir(dst_dir)
+            for file_ in files:
+                src_file = os.path.join(src_dir, file_)
+                dst_file = os.path.join(dst_dir, file_)
+                if os.path.exists(dst_file):
+                    os.remove(dst_file)
+                shutil.move(src_file, dst_dir)
+        return False
+    except:
+        return True
+
 
 def main():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.7.1                       ")
+    print("                          SergiX44's Rocket Manager 1.8.0                       ")
     print("--------------------------------------------------------------------------------\n\n")
-    print("Loading config...")
 
-    if not os.path.exists(MANAGER_FOLDER):
+    print("> Creating folders...")
+    if(not os.path.exists(MANAGER_FOLDER)):
         os.makedirs(MANAGER_FOLDER)
 
+    print("> Loading config...")
     if (load_config(MANAGER_FOLDER+"config_RocketManager.xml")):
         print("Close and edit config_RocketManager.xml, then restart me!")
         raw_input("Press any key to continue...")
@@ -233,9 +256,9 @@ def main():
     if (not os.path.isfile("steamcmd.exe")):
         ex = True
         while (ex):
-            sel = raw_input("SteamCMD not found! Would you like download it? (y/n) ")
+            sel = raw_input("> SteamCMD not found! Would you like download it? (y/n) ")
             if (sel == "y"):
-                print("Downloading steamcmd...")
+                print("> Downloading steamcmd...")
                 if (downloader("steam")):
                     print("ERROR: Unable to download steam! Please check your internet settings!")
                     raw_input("Press any key to continue...")
@@ -253,28 +276,46 @@ def main():
 
     while 1:
         #reloading config
+        print("> Reloading config...")
         if (load_config(MANAGER_FOLDER+"config_RocketManager.xml")):
-            print("Failed loading config! :( \nConfig file regenerated, edit config_RocketManager.xml, then restart me!")
+            print("> Failed loading config! :( \nConfig file regenerated, edit config_RocketManager.xml, then restart me!")
             raw_input("Press any key to continue...")
             sys.exit(2)
 
+        #saving bundles
+        if(BACKUP_BUNDLES == "true"):
+            print("> Saving Bundles...")
+            try:
+                if(not os.path.exists(BACKUP_BUNDLES_FOLDER)):
+                    os.makedirs(BACKUP_BUNDLES_FOLDER)
+                if(os.path.exists(BACKUP_BUNDLES_FOLDER + "\\Bundles")):
+                    shutil.rmtree(BACKUP_BUNDLES_FOLDER + "\\Bundles")
+                shutil.copytree(UNTURNED_PATH + "\\Bundles", BACKUP_BUNDLES_FOLDER + "\\Bundles")
+            except:
+                print("ERROR: Cannot saving Bundles, aborting...")
+
         #launch steam cmd
         if ((not os.path.isdir(UNTURNED_PATH)) or (VALIDATE_AT_BOOT == "true")):
-            print("Launching steam...")
-            print ("--------------------------------------------------------------------------------\n\n")
-            os.system(
-                "steamcmd.exe +login " + STEAM_USER + " " + STEAM_PASS + " +force_install_dir " + UNTURNED_PATH + " +app_update 304930 validate +exit")
-            print ("--------------------------------------------------------------------------------\n\n")
+            print("> Launching SteamCMD...")
+            print ("------------------------------------SteamCMD------------------------------------\n")
+            os.system("steamcmd.exe +login " + STEAM_USER + " " + STEAM_PASS + " +force_install_dir " + UNTURNED_PATH + " +app_update 304930 validate +exit")
+            print ("\n------------------------------------END-----------------------------------------\n\n")
+
+        #recovering bundles
+        if(BACKUP_BUNDLES == "true"):
+            print("> Recovering Bundles...")
+            if(merge_files(BACKUP_BUNDLES_FOLDER + "\\Bundles", UNTURNED_PATH + "\\Bundles")):
+                print("ERROR: Cannot recovering Bundles, aborting...")
 
         #download
-        print("Downloading rocket...")
+        print("> Downloading rocket...")
         if (downloader("rocket")):
             print("ERROR: Unable to download rocket! Please check your internet settings!")
             raw_input("Press any key to continue...")
             sys.exit(3)
 
         #extract
-        print("Extracting rocket...")
+        print("> Extracting rocket...")
         rocket_downloaded = True
         correct_opened = True
         checkzip = None
@@ -289,34 +330,34 @@ def main():
                 shutil.rmtree(ROCKET_EXTRACT_FOLDER)
             extractor(OUTPUT_ZIP_ROCKET, ROCKET_EXTRACT_FOLDER)
         else:
-            print("Failed to extract Rocket zip (maybe a malformed zip?)")
+            print("> Failed to extract Rocket zip (maybe a malformed zip?)")
             if(os.listdir(ROCKET_EXTRACT_FOLDER)):
-                print("Using the lastest correct download...")
+                print("> Using the lastest correct download...")
             else:
-                print("Not failover found, launching servers...")
+                print("> Not failover found, launching servers...")
                 rocket_downloaded = False
 
 
 
         #Moving files
         if(rocket_downloaded):
-            print("Installing rocket...")
+            print("> Installing rocket...")
             if (installer(ROCKET_EXTRACT_FOLDER)):
-                print("Error installing rocket, looking for opened game instances...")
+                print("> Error installing rocket, looking for opened game instances...")
                 os.system("taskkill /f /im " + PROCNAME_WIN)
                 time.sleep(1)
                 if(installer(ROCKET_EXTRACT_FOLDER)):
-                    print("Unable to install rocket! try to revalidate the installation!")
+                    print("> Unable to install rocket! try to revalidate the installation!")
                     clean_up()
                     raw_input("Press any key to continue...")
                     sys.exit(4)
 
         #clean up zips and extracted files
-        print("Cleaning up...")
+        print("> Cleaning up...")
         clean_up()
 
         #launching servers
-        print("Launching servers...")
+        print("> Launching servers...")
         for i in range(0, len(SERVERS_TO_LAUNCH)):
             print("    - Launching " + SERVERS_TO_LAUNCH[i])
             os.system("cd " + UNTURNED_PATH + "\ & start Unturned.exe -nographics -batchmode +secureserver/" +
@@ -325,7 +366,7 @@ def main():
         #timer
         counter = REBOOT_TIME
         while (counter >= 0):
-            sys.stdout.write('Waiting %s ...\r' % str(counter))
+            sys.stdout.write('> Waiting %s ...\r' % str(counter))
             sys.stdout.flush()
             time.sleep(1)
             counter -= 1
@@ -335,14 +376,14 @@ def main():
                         rcon_notify(RCON_PORT[i], RCON_PASSWORD[i])
                         print("    -Reboot Notified on port " + str(RCON_PORT[i]))
                     except:
-                        print("Unable to notify the reboot on port " + str(RCON_PORT[i]) + "! Check your config!")
+                        print("    -Unable to notify the reboot on port " + str(RCON_PORT[i]) + "! Check your config!")
 
         if (RCON_ENABLED == "true"):
             try:
                 for i in range(0, len(RCON_PORT)):
                     rcon_shutdown(RCON_PORT[i], RCON_PASSWORD[i])
             except:
-                print("Unable to stopping the server using rcon, using the classic method...")
+                print("> Unable to stopping the server using rcon, using the classic method...")
                 os.system("taskkill /f /im " + PROCNAME_WIN)
         else:
             os.system("taskkill /f /im " + PROCNAME_WIN)
