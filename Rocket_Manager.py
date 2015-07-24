@@ -37,7 +37,7 @@ def write_config(name):
 <config>
 	<rebootEvery seconds="3600" />
 	<unturnedFolder path=".\unturned" recoveryBundlesAfterUpdates="false" />
-	<rocket apikey=""/>
+	<rocket useRocket="true" apikey=""/>
 	<steam username="" password="" />
 	<steamUpdates validate="true" />
 	<servers rconEnabled="false">
@@ -61,6 +61,7 @@ def load_config(name):
     global STEAM_PASS
     global APIKEY
     global BACKUP_BUNDLES
+    global ROCKET_ENABLED
 
     if (not os.path.isfile(name)):
         write_config(name)
@@ -83,6 +84,7 @@ def load_config(name):
 
         node = tree.find("rocket")
         APIKEY = node.attrib.get("apikey")
+        ROCKET_ENABLED = node.attrib.get("useRocket")
 
         node = tree.find("steam")
         STEAM_USER = node.attrib.get("username")
@@ -240,7 +242,7 @@ def merge_files(root_src_dir, root_dst_dir):
 
 def main():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.8.0                       ")
+    print("                          SergiX44's Rocket Manager 1.8                         ")
     print("--------------------------------------------------------------------------------\n\n")
 
     print("> Creating folders...")
@@ -307,54 +309,55 @@ def main():
             if(merge_files(BACKUP_BUNDLES_FOLDER + "\\Bundles", UNTURNED_PATH + "\\Bundles")):
                 print("ERROR: Cannot recovering Bundles, aborting...")
 
-        #download
-        print("> Downloading rocket...")
-        if (downloader("rocket")):
-            print("ERROR: Unable to download rocket! Please check your internet settings!")
-            raw_input("Press any key to continue...")
-            sys.exit(3)
+        if(ROCKET_ENABLED == "true"):
+            #download
+            print("> Downloading rocket...")
+            if (downloader("rocket")):
+                print("ERROR: Unable to download rocket! Please check your internet settings!")
+                raw_input("Press any key to continue...")
+                sys.exit(3)
 
-        #extract
-        print("> Extracting rocket...")
-        rocket_downloaded = True
-        correct_opened = True
-        checkzip = None
-        try:
-            zzip = zipfile.ZipFile(OUTPUT_ZIP_ROCKET)
-            checkzip = zzip.testzip()
-            zzip.close()
-        except zipfile.BadZipfile:
-            correct_opened = False
-        if ((checkzip is None) and correct_opened):
-            if os.path.exists(ROCKET_EXTRACT_FOLDER):
-                shutil.rmtree(ROCKET_EXTRACT_FOLDER)
-            extractor(OUTPUT_ZIP_ROCKET, ROCKET_EXTRACT_FOLDER)
-        else:
-            print("> Failed to extract Rocket zip (maybe a malformed zip?)")
-            if(os.listdir(ROCKET_EXTRACT_FOLDER)):
-                print("> Using the lastest correct download...")
+            #extract
+            print("> Extracting rocket...")
+            rocket_downloaded = True
+            correct_opened = True
+            checkzip = None
+            try:
+                zzip = zipfile.ZipFile(OUTPUT_ZIP_ROCKET)
+                checkzip = zzip.testzip()
+                zzip.close()
+            except zipfile.BadZipfile:
+                correct_opened = False
+            if ((checkzip is None) and correct_opened):
+                if os.path.exists(ROCKET_EXTRACT_FOLDER):
+                    shutil.rmtree(ROCKET_EXTRACT_FOLDER)
+                extractor(OUTPUT_ZIP_ROCKET, ROCKET_EXTRACT_FOLDER)
             else:
-                print("> Not failover found, launching servers...")
-                rocket_downloaded = False
+                print("> Failed to extract Rocket zip (maybe a malformed zip?)")
+                if(os.listdir(ROCKET_EXTRACT_FOLDER)):
+                    print("> Using the lastest correct download...")
+                else:
+                    print("> Not failover found, launching servers...")
+                    rocket_downloaded = False
 
 
 
-        #Moving files
-        if(rocket_downloaded):
-            print("> Installing rocket...")
-            if (installer(ROCKET_EXTRACT_FOLDER)):
-                print("> Error installing rocket, looking for opened game instances...")
-                os.system("taskkill /f /im " + PROCNAME_WIN)
-                time.sleep(1)
-                if(installer(ROCKET_EXTRACT_FOLDER)):
-                    print("> Unable to install rocket! try to revalidate the installation!")
-                    clean_up()
-                    raw_input("Press any key to continue...")
-                    sys.exit(4)
+            #Moving files
+            if(rocket_downloaded):
+                print("> Installing rocket...")
+                if (installer(ROCKET_EXTRACT_FOLDER)):
+                    print("> Error installing rocket, looking for opened game instances...")
+                    os.system("taskkill /f /im " + PROCNAME_WIN)
+                    time.sleep(1)
+                    if(installer(ROCKET_EXTRACT_FOLDER)):
+                        print("> Unable to install rocket! try to revalidate the installation!")
+                        clean_up()
+                        raw_input("Press any key to continue...")
+                        sys.exit(4)
 
-        #clean up zips and extracted files
-        print("> Cleaning up...")
-        clean_up()
+            #clean up zips and extracted files
+            print("> Cleaning up...")
+            clean_up()
 
         #launching servers
         print("> Launching servers...")
@@ -370,7 +373,7 @@ def main():
             sys.stdout.flush()
             time.sleep(1)
             counter -= 1
-            if (RCON_ENABLED == "true") and (counter == NOTIFY_TIME):
+            if (RCON_ENABLED == "true") and (counter == NOTIFY_TIME) and (ROCKET_ENABLED == "true"):
                 for i in range(0, len(RCON_PORT)):
                     try:
                         rcon_notify(RCON_PORT[i], RCON_PASSWORD[i])
@@ -378,7 +381,7 @@ def main():
                     except:
                         print("    -Unable to notify the reboot on port " + str(RCON_PORT[i]) + "! Check your config!")
 
-        if (RCON_ENABLED == "true"):
+        if (RCON_ENABLED == "true") and (ROCKET_ENABLED == "true"):
             try:
                 for i in range(0, len(RCON_PORT)):
                     rcon_shutdown(RCON_PORT[i], RCON_PASSWORD[i])
