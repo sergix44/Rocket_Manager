@@ -162,67 +162,6 @@ def installer(folder):
     except IOError:
         return True
 
-def rcon_notify(port, passw):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect(("127.0.0.1", port))
-    s.recv(2048)
-    
-    s.send("login " + passw)
-    time.sleep(0.2)
-    s.send("\r\n")
-    time.sleep(0.2)
-    s.recv(2048)
-    time.sleep(0.2)
-    
-    s.send("say [Manager] This server will restart in " + str(NOTIFY_TIME) + " seconds")
-    time.sleep(0.2)
-    s.send("\r\n")
-    time.sleep(0.2)
-    s.recv(2048)
-
-    s.send("quit")
-    time.sleep(0.2)
-    s.send("\r\n")
-    time.sleep(0.2)
-    s.recv(2048)
-    time.sleep(0.2)
-    
-    s.close()
-
-def rcon_shutdown(port, passw):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect(("127.0.0.1", port))
-    s.recv(2048)
-
-    s.send("login " + passw)
-    time.sleep(0.2)
-    s.send("\r\n")
-    time.sleep(0.2)
-    s.recv(2048)
-    time.sleep(0.2)
-
-    s.send("say Rebooting...")
-    time.sleep(0.2)
-    s.send("\r\n")
-    time.sleep(0.2)
-    s.recv(2048)
-    time.sleep(0.2)
-
-    s.send("save")
-    time.sleep(0.2)
-    s.send("\r\n")
-    time.sleep(0.2)
-    s.recv(2048)
-    time.sleep(0.2)
-
-    s.send("shutdown")
-    time.sleep(0.2)
-    s.send("\r\n")
-    time.sleep(0.2)
-    s.recv(2048)
-
-    s.close()
-
 def merge_files(root_src_dir, root_dst_dir):
     try:
         for src_dir, dirs, files in os.walk(root_src_dir):
@@ -239,10 +178,33 @@ def merge_files(root_src_dir, root_dst_dir):
     except:
         return True
 
+def rcon_notify(port, passw):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect(("127.0.0.1", port))
+    s.settimeout(5)
+    s.send("login " + passw + "\n")
+    s.send("broadcast [Manager] This server will restart in " + str(NOTIFY_TIME) + " seconds\n")
+    s.send("quit\n")
+    s.recv(1024)
+
+    s.close()
+
+def rcon_shutdown(port, passw):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect(("127.0.0.1", port))
+    s.settimeout(5)
+    s.send("login " + passw + "\n")
+    s.send("broadcast Rebooting...\n")
+    s.send("save\n")
+    s.send("shutdown\n")
+    s.recv(1024)
+
+    s.close()
+
 
 def main():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.8                         ")
+    print("                          SergiX44's Rocket Manager 1.8.1                       ")
     print("--------------------------------------------------------------------------------\n\n")
 
     print("> Creating folders...")
@@ -394,10 +356,3 @@ def main():
 
 if (__name__ == '__main__'):
     main()
-
-
-
-
-
-
-
