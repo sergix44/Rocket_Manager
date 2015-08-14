@@ -204,26 +204,26 @@ def rcon_shutdown(port, passw):
 
 def main():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.8.1                       ")
+    print("                          SergiX44's Rocket Manager 1.8.2                       ")
     print("--------------------------------------------------------------------------------\n\n")
 
     print("> Creating folders...")
-    if(not os.path.exists(MANAGER_FOLDER)):
+    if not os.path.exists(MANAGER_FOLDER):
         os.makedirs(MANAGER_FOLDER)
 
     print("> Loading config...")
-    if (load_config(MANAGER_FOLDER+"config_RocketManager.xml")):
+    if load_config(MANAGER_FOLDER + "config_RocketManager.xml"):
         print("Close and edit config_RocketManager.xml, then restart me!")
         raw_input("Press any key to continue...")
         sys.exit(1)
 
-    if (not os.path.isfile("steamcmd.exe")):
+    if not os.path.isfile("steamcmd.exe"):
         ex = True
-        while (ex):
+        while ex:
             sel = raw_input("> SteamCMD not found! Would you like download it? (y/n) ")
-            if (sel == "y"):
+            if sel == "y":
                 print("> Downloading steamcmd...")
-                if (downloader("steam")):
+                if downloader("steam"):
                     print("ERROR: Unable to download steam! Please check your internet settings!")
                     raw_input("Press any key to continue...")
                     sys.exit(3)
@@ -232,7 +232,7 @@ def main():
                 zfile.extractall()
                 zfile.close()
                 ex = False
-            if (sel == "n"):
+            if sel == "n":
                 ex = False
                 print("Closing...")
                 time.sleep(1)
@@ -241,43 +241,44 @@ def main():
     while 1:
         #reloading config
         print("> Reloading config...")
-        if (load_config(MANAGER_FOLDER+"config_RocketManager.xml")):
-            print("> Failed loading config! :( \nConfig file regenerated, edit config_RocketManager.xml, then restart me!")
+        if load_config(MANAGER_FOLDER + "config_RocketManager.xml"):
+            print("> Failed loading config! :( \n"
+                  "Config file regenerated, edit config_RocketManager.xml, then restart me!")
             raw_input("Press any key to continue...")
             sys.exit(2)
 
         #saving bundles
-        if(BACKUP_BUNDLES == "true"):
+        if BACKUP_BUNDLES == "true":
             print("> Saving Bundles...")
             try:
-                if(not os.path.exists(BACKUP_BUNDLES_FOLDER)):
+                if not os.path.exists(BACKUP_BUNDLES_FOLDER):
                     os.makedirs(BACKUP_BUNDLES_FOLDER)
-                if(os.path.exists(BACKUP_BUNDLES_FOLDER + "\\Bundles")):
+                if os.path.exists(BACKUP_BUNDLES_FOLDER + "\\Bundles"):
                     shutil.rmtree(BACKUP_BUNDLES_FOLDER + "\\Bundles")
                 shutil.copytree(UNTURNED_PATH + "\\Bundles", BACKUP_BUNDLES_FOLDER + "\\Bundles")
             except:
                 print("ERROR: Cannot saving Bundles, aborting...")
 
         #launch steam cmd
-        if ((not os.path.isdir(UNTURNED_PATH)) or (VALIDATE_AT_BOOT == "true")):
+        if (not os.path.isdir(UNTURNED_PATH)) or (VALIDATE_AT_BOOT == "true"):
             print("> Launching SteamCMD...")
             print ("------------------------------------SteamCMD------------------------------------\n")
             os.system("steamcmd.exe +login " + STEAM_USER + " " + STEAM_PASS + " +force_install_dir " + UNTURNED_PATH + " +app_update 304930 validate +exit")
             print ("\n------------------------------------END-----------------------------------------\n\n")
 
         #recovering bundles
-        if(BACKUP_BUNDLES == "true"):
+        if BACKUP_BUNDLES == "true":
             print("> Recovering Bundles...")
-            if(merge_files(BACKUP_BUNDLES_FOLDER + "\\Bundles", UNTURNED_PATH + "\\Bundles")):
+            if merge_files(BACKUP_BUNDLES_FOLDER + "\\Bundles", UNTURNED_PATH + "\\Bundles"):
                 print("ERROR: Cannot recovering Bundles, aborting...")
 
-        if(ROCKET_ENABLED == "true"):
+        if ROCKET_ENABLED == "true":
             #download
             print("> Downloading rocket...")
-            if (downloader("rocket")):
-                print("ERROR: Unable to download rocket! Please check your internet settings!")
-                raw_input("Press any key to continue...")
-                sys.exit(3)
+            while downloader("rocket"):
+                print("ERROR: Unable to download rocket! Please check your internet settings!\n"
+                      "> Retrying in 5 seconds..")
+                time.sleep(5)
 
             #extract
             print("> Extracting rocket...")
@@ -290,28 +291,26 @@ def main():
                 zzip.close()
             except zipfile.BadZipfile:
                 correct_opened = False
-            if ((checkzip is None) and correct_opened):
+            if (checkzip is None) and correct_opened:
                 if os.path.exists(ROCKET_EXTRACT_FOLDER):
                     shutil.rmtree(ROCKET_EXTRACT_FOLDER)
                 extractor(OUTPUT_ZIP_ROCKET, ROCKET_EXTRACT_FOLDER)
             else:
                 print("> Failed to extract Rocket zip (maybe a malformed zip?)")
-                if(os.listdir(ROCKET_EXTRACT_FOLDER)):
+                if os.listdir(ROCKET_EXTRACT_FOLDER):
                     print("> Using the lastest correct download...")
                 else:
                     print("> Not failover found, launching servers...")
                     rocket_downloaded = False
 
-
-
             #Moving files
-            if(rocket_downloaded):
+            if rocket_downloaded:
                 print("> Installing rocket...")
-                if (installer(ROCKET_EXTRACT_FOLDER)):
+                if installer(ROCKET_EXTRACT_FOLDER):
                     print("> Error installing rocket, looking for opened game instances...")
                     os.system("taskkill /f /im " + PROCNAME_WIN)
                     time.sleep(1)
-                    if(installer(ROCKET_EXTRACT_FOLDER)):
+                    if installer(ROCKET_EXTRACT_FOLDER):
                         print("> Unable to install rocket! try to revalidate the installation!")
                         clean_up()
                         raw_input("Press any key to continue...")
@@ -330,7 +329,7 @@ def main():
 
         #timer
         counter = REBOOT_TIME
-        while (counter >= 0):
+        while counter >= 0:
             sys.stdout.write('> Waiting %s ...\r' % str(counter))
             sys.stdout.flush()
             time.sleep(1)
@@ -354,5 +353,5 @@ def main():
             os.system("taskkill /f /im " + PROCNAME_WIN)
 
 
-if (__name__ == '__main__'):
+if __name__ == '__main__':
     main()
