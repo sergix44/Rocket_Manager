@@ -202,7 +202,7 @@ def rcon_shutdown(port, passw):
     s.close()
 
 
-def main():
+def bootstrap():
     print("--------------------------------------------------------------------------------")
     print("                          SergiX44's Rocket Manager 1.8.2                       ")
     print("--------------------------------------------------------------------------------\n\n")
@@ -237,6 +237,11 @@ def main():
                 print("Closing...")
                 time.sleep(1)
                 sys.exit(1)
+
+
+def main():
+
+    bootstrap()
 
     while 1:
         #reloading config
