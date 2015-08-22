@@ -17,7 +17,7 @@ ROCKET_EXTRACT_FOLDER = MANAGER_FOLDER + "last_rocket_download"
 BACKUP_BUNDLES_FOLDER = MANAGER_FOLDER + "cpy_bundles"
 
 # For Win
-URL_ROCKET_BETA = "http://api.rocket.foundation/beta/latest/"
+URL_ROCKET_BETA = "http://api.rocket.foundation/download/unturned/latest/"
 URL_STEAM_WIN = "http://media.steampowered.com/installer/steamcmd.zip"
 
 OUTPUT_ZIP_STEAM_WIN = MANAGER_FOLDER + "steam_temp.zip"
@@ -25,7 +25,7 @@ OUTPUT_ZIP_ROCKET = MANAGER_FOLDER + "rocket_temp.zip"
 
 #For Linux
 
-URL_ROCKET_LINUX = "http://api.rocket.foundation/linux-beta/latest/"
+URL_ROCKET_LINUX = "http://api.rocket.foundation/download/unturned-linux/latest/"
 URL_STEAM_LINUX = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz"
 
 PROCNAME_WIN = "Unturned.exe"
@@ -204,7 +204,7 @@ def rcon_shutdown(port, passw):
 
 def bootstrap():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.8.2                       ")
+    print("                          SergiX44's Rocket Manager 1.8.3                       ")
     print("--------------------------------------------------------------------------------\n\n")
 
     print("> Creating folders...")
@@ -329,8 +329,9 @@ def main():
         print("> Launching servers...")
         for i in range(0, len(SERVERS_TO_LAUNCH)):
             print("    - Launching " + SERVERS_TO_LAUNCH[i])
-            os.system("cd " + UNTURNED_PATH + "\ & start Unturned.exe -nographics -batchmode +secureserver/" +
+            os.system("cd " + UNTURNED_PATH + "\ & start Unturned.exe -nographics -batchmode -silent-crashes +secureserver/" +
                       SERVERS_TO_LAUNCH[i])
+            time.sleep(1)
 
         #timer
         counter = REBOOT_TIME
