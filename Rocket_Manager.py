@@ -1,13 +1,12 @@
-from xml.etree import ElementTree
-import sys
-import time
 import os
-import urllib
-import zipfile
+import platform
 import shutil
 import socket
-import platform
-
+import sys
+import time
+import urllib
+import zipfile
+from xml.etree import ElementTree
 
 # --Constants
 
@@ -23,14 +22,15 @@ URL_STEAM_WIN = "http://media.steampowered.com/installer/steamcmd.zip"
 OUTPUT_ZIP_STEAM_WIN = MANAGER_FOLDER + "steam_temp.zip"
 OUTPUT_ZIP_ROCKET = MANAGER_FOLDER + "rocket_temp.zip"
 
-#For Linux
+# For Linux
 
 URL_ROCKET_LINUX = "http://api.rocket.foundation/download/unturned-linux/latest/"
 URL_STEAM_LINUX = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz"
 
 PROCNAME_WIN = "Unturned.exe"
 
-#--Functions
+
+# --Functions
 def write_config(name):
     f = open(name, "w")
     f.write('''<?xml version="1.0" encoding="UTF-8"?>
@@ -48,6 +48,7 @@ def write_config(name):
 </config>''')
     f.close()
 
+
 def load_config(name):
     global REBOOT_TIME
     global NOTIFY_TIME
@@ -63,7 +64,7 @@ def load_config(name):
     global BACKUP_BUNDLES
     global ROCKET_ENABLED
 
-    if (not os.path.isfile(name)):
+    if not os.path.isfile(name):
         write_config(name)
         return True
     try:
@@ -79,7 +80,7 @@ def load_config(name):
         node = tree.find("unturnedFolder")
         UNTURNED_PATH = node.attrib.get("path")
         BACKUP_BUNDLES = node.attrib.get("recoveryBundlesAfterUpdates")
-        if(VALIDATE_AT_BOOT != "true"):
+        if VALIDATE_AT_BOOT != "true":
             BACKUP_BUNDLES = "false"
 
         node = tree.find("rocket")
@@ -98,13 +99,12 @@ def load_config(name):
             RCON_PORT.append(int(node.attrib.get("rconPort")))
             RCON_PASSWORD.append(node.attrib.get("rconPassword"))
 
-
         node = tree.find("servers")
         RCON_ENABLED = node.attrib.get("rconEnabled")
 
         node = tree.find("notifyBefore")
         NOTIFY_TIME = int(node.attrib.get("seconds"))
-        if (NOTIFY_TIME > REBOOT_TIME):
+        if NOTIFY_TIME > REBOOT_TIME:
             NOTIFY_TIME = REBOOT_TIME
         return False
 
@@ -112,11 +112,12 @@ def load_config(name):
         write_config(name)
         return True
 
+
 def downloader(i):
     err = False
-    if (i == "steam"):
+    if i == "steam":
         try:
-            if (platform.system() == "Windows"):
+            if platform.system() == "Windows":
                 urllib.urlretrieve(URL_STEAM_WIN, OUTPUT_ZIP_STEAM_WIN)
             else:
                 urllib.urlretrieve(URL_STEAM_LINUX, OUTPUT_ZIP_STEAM_WIN)
@@ -124,9 +125,9 @@ def downloader(i):
         except:
             err = True
 
-    if (i == "rocket"):
+    if i == "rocket":
         try:
-            if (platform.system() == "Windows"):
+            if platform.system() == "Windows":
                 urllib.urlretrieve(URL_ROCKET_BETA + APIKEY, OUTPUT_ZIP_ROCKET)
             else:
                 urllib.urlretrieve(URL_ROCKET_LINUX + APIKEY, OUTPUT_ZIP_ROCKET)
@@ -134,12 +135,14 @@ def downloader(i):
             err = True
     return err
 
+
 def extractor(namezip, folder):
     zfile = zipfile.ZipFile(namezip)
     if not os.path.exists(folder):
         os.makedirs(folder)
     zfile.extractall(folder)
     zfile.close()
+
 
 def clean_up():
     try:
@@ -151,16 +154,18 @@ def clean_up():
     except:
         pass
 
+
 def installer(folder):
     try:
         for f in os.listdir(folder):
-            if (not os.path.isdir(os.path.join(folder, f))):
+            if not os.path.isdir(os.path.join(folder, f)):
                 src_file = os.path.join(folder, f)
                 dst_file = os.path.join(UNTURNED_PATH + "\\Unturned_Data\\Managed\\", f)
                 shutil.copyfile(src_file, dst_file)
         return False
     except IOError:
         return True
+
 
 def merge_files(root_src_dir, root_dst_dir):
     try:
@@ -178,33 +183,58 @@ def merge_files(root_src_dir, root_dst_dir):
     except:
         return True
 
-def rcon_notify(port, passw):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect(("127.0.0.1", port))
-    s.settimeout(5)
-    s.send("login " + passw + "\n")
-    s.send("broadcast [Manager] This server will restart in " + str(NOTIFY_TIME) + " seconds\n")
-    s.send("quit\n")
-    s.recv(1024)
 
-    s.close()
+def rcon_notify(port, passw):
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect(("127.0.0.1", port))
+        s.settimeout(5)
+        s.send("login " + passw + "\n")
+        s.recv(1024)
+        s.send("broadcast [Manager] This server will restart in " + str(NOTIFY_TIME) + " seconds\n")
+        s.recv(1024)
+        s.send("quit\n")
+        s.recv(1024)
+        time.sleep(2.5)
+        s.close()
+
+        s.close()
+        return False
+    except Exception:
+        return True
+
 
 def rcon_shutdown(port, passw):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect(("127.0.0.1", port))
-    s.settimeout(5)
-    s.send("login " + passw + "\n")
-    s.send("broadcast Rebooting...\n")
-    s.send("save\n")
-    s.send("shutdown\n")
-    s.recv(1024)
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect(("127.0.0.1", port))
+        s.settimeout(5)
+        s.send("login " + passw + "\n")
+        s.recv(1024)
+        s.send("broadcast Rebooting...\n")
+        s.recv(1024)
+        s.send("save\n")
+        s.recv(1024)
+        s.send("shutdown\n")
+        s.recv(1024)
+        s.send("quit\n")
+        s.recv(1024)
+        time.sleep(2.5)
+        s.close()
 
-    s.close()
+        return False
+    except Exception:
+        return True
+
+
+def kill_server(item=None):
+    if platform.system() == "Windows":
+        os.system("taskkill /f /im " + PROCNAME_WIN)
 
 
 def bootstrap():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.8.3                       ")
+    print("                          SergiX44's Rocket Manager 1.8.4                       ")
     print("--------------------------------------------------------------------------------\n\n")
 
     print("> Creating folders...")
@@ -240,19 +270,23 @@ def bootstrap():
 
 
 def main():
+    rocket_installed = True
+    rocket_downloaded = True
+    correct_opened = True
+    checkzip = None
 
     bootstrap()
 
     while 1:
-        #reloading config
+        # reloading config
         print("> Reloading config...")
         if load_config(MANAGER_FOLDER + "config_RocketManager.xml"):
-            print("> Failed loading config! :( \n"
-                  "Config file regenerated, edit config_RocketManager.xml, then restart me!")
+            print("> Failed loading config. \n"
+                  "Config file regenerated, edit config_RocketManager.xml, then restart.")
             raw_input("Press any key to continue...")
             sys.exit(2)
 
-        #saving bundles
+        # saving bundles
         if BACKUP_BUNDLES == "true":
             print("> Saving Bundles...")
             try:
@@ -264,32 +298,29 @@ def main():
             except:
                 print("ERROR: Cannot saving Bundles, aborting...")
 
-        #launch steam cmd
+        # launch steam cmd
         if (not os.path.isdir(UNTURNED_PATH)) or (VALIDATE_AT_BOOT == "true"):
             print("> Launching SteamCMD...")
             print ("------------------------------------SteamCMD------------------------------------\n")
             os.system("steamcmd.exe +login " + STEAM_USER + " " + STEAM_PASS + " +force_install_dir " + UNTURNED_PATH + " +app_update 304930 validate +exit")
             print ("\n------------------------------------END-----------------------------------------\n\n")
 
-        #recovering bundles
+        # recovering bundles
         if BACKUP_BUNDLES == "true":
             print("> Recovering Bundles...")
             if merge_files(BACKUP_BUNDLES_FOLDER + "\\Bundles", UNTURNED_PATH + "\\Bundles"):
                 print("ERROR: Cannot recovering Bundles, aborting...")
 
         if ROCKET_ENABLED == "true":
-            #download
+            # download
             print("> Downloading rocket...")
             while downloader("rocket"):
                 print("ERROR: Unable to download rocket! Please check your internet settings!\n"
                       "> Retrying in 5 seconds..")
                 time.sleep(5)
 
-            #extract
+            # extract
             print("> Extracting rocket...")
-            rocket_downloaded = True
-            correct_opened = True
-            checkzip = None
             try:
                 zzip = zipfile.ZipFile(OUTPUT_ZIP_ROCKET)
                 checkzip = zzip.testzip()
@@ -308,55 +339,51 @@ def main():
                     print("> Not failover found, launching servers...")
                     rocket_downloaded = False
 
-            #Moving files
+            # Moving files
             if rocket_downloaded:
                 print("> Installing rocket...")
                 if installer(ROCKET_EXTRACT_FOLDER):
                     print("> Error installing rocket, looking for opened game instances...")
-                    os.system("taskkill /f /im " + PROCNAME_WIN)
+                    kill_server()
                     time.sleep(1)
                     if installer(ROCKET_EXTRACT_FOLDER):
-                        print("> Unable to install rocket! try to revalidate the installation!")
+                        print("> Unable to install rocket! Restarting the procedure...")
                         clean_up()
-                        raw_input("Press any key to continue...")
-                        sys.exit(4)
+                        rocket_installed = False
 
-            #clean up zips and extracted files
+            # clean up zips and extracted files
             print("> Cleaning up...")
             clean_up()
 
-        #launching servers
-        print("> Launching servers...")
-        for i in range(0, len(SERVERS_TO_LAUNCH)):
-            print("    - Launching " + SERVERS_TO_LAUNCH[i])
-            os.system("cd " + UNTURNED_PATH + "\ & start Unturned.exe -nographics -batchmode -silent-crashes +secureserver/" +
-                      SERVERS_TO_LAUNCH[i])
-            time.sleep(1)
+        if (rocket_installed and ROCKET_ENABLED) or (not ROCKET_ENABLED):
+            # launching servers
+            print("> Launching servers...")
+            for i in range(0, len(SERVERS_TO_LAUNCH)):
+                print("    - Launching " + SERVERS_TO_LAUNCH[i])
+                os.system("cd " + UNTURNED_PATH + "\ & start Unturned.exe -nographics -batchmode -silent-crashes +secureserver/" + SERVERS_TO_LAUNCH[i])
+                time.sleep(1)
 
-        #timer
-        counter = REBOOT_TIME
-        while counter >= 0:
-            sys.stdout.write('> Waiting %s ...\r' % str(counter))
-            sys.stdout.flush()
-            time.sleep(1)
-            counter -= 1
-            if (RCON_ENABLED == "true") and (counter == NOTIFY_TIME) and (ROCKET_ENABLED == "true"):
-                for i in range(0, len(RCON_PORT)):
-                    try:
-                        rcon_notify(RCON_PORT[i], RCON_PASSWORD[i])
-                        print("    -Reboot Notified on port " + str(RCON_PORT[i]))
-                    except:
-                        print("    -Unable to notify the reboot on port " + str(RCON_PORT[i]) + "! Check your config!")
+            # timer
+            counter = REBOOT_TIME
+            while counter >= 0:
+                sys.stdout.write('> Waiting %s ...\r' % str(counter))
+                sys.stdout.flush()
+                time.sleep(1)
+                counter -= 1
+                if (RCON_ENABLED == "true") and (counter == NOTIFY_TIME) and (ROCKET_ENABLED == "true"):
+                    for i in range(0, len(RCON_PORT)):
+                        if rcon_notify(RCON_PORT[i], RCON_PASSWORD[i]):
+                            print("    -Unable to notify the reboot on port " + str(RCON_PORT[i]) + "! Check your config!")
+                        else:
+                            print("    -Reboot Notified on port " + str(RCON_PORT[i]))
 
-        if (RCON_ENABLED == "true") and (ROCKET_ENABLED == "true"):
-            try:
+            if (RCON_ENABLED == "true") and (ROCKET_ENABLED == "true"):
                 for i in range(0, len(RCON_PORT)):
-                    rcon_shutdown(RCON_PORT[i], RCON_PASSWORD[i])
-            except:
-                print("> Unable to stopping the server using rcon, using the classic method...")
-                os.system("taskkill /f /im " + PROCNAME_WIN)
-        else:
-            os.system("taskkill /f /im " + PROCNAME_WIN)
+                    if rcon_shutdown(RCON_PORT[i], RCON_PASSWORD[i]):
+                        print("> Unable to stopping the server using rcon, using the classic method...")
+                        kill_server()
+            else:
+                kill_server()
 
 
 if __name__ == '__main__':
