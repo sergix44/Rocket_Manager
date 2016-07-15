@@ -259,6 +259,8 @@ def kill_server(item=None):
         os.system("taskkill /f /im " + PROCNAME_WIN)
     else:
         os.system("screen -S " + item + ' -X stuff "save^M"')
+        time.sleep(5)
+        os.system("screen -S " + item + ' -X stuff "shutdown^M"')
 
 
 def start_server(server):
@@ -331,7 +333,8 @@ def bootstrap():
                     os.system("chmod 755 " + STEAM_EXECUTABLE)
                     os.system("dpkg --add-architecture i386")
                     os.system("apt-get update")
-                    os.system("apt-get -y install libmono2.0-cil mono-runtime screen htop unzip lib32gcc1 lib32stdc++6 libglu1-mesa libxcursor1 libxrandr2 libc6:i386 libgl1-mesa-glx:i386 libxcursor1:i386 libxrandr2:i386")
+                    os.system(
+                        "apt-get -y install libmono2.0-cil mono-runtime screen htop unzip lib32gcc1 lib32stdc++6 libglu1-mesa libxcursor1 libxrandr2 libc6:i386 libgl1-mesa-glx:i386 libxcursor1:i386 libxrandr2:i386")
                 ex = False
             if sel == "n":
                 ex = False
@@ -431,17 +434,26 @@ def main():
                 if (RCON_ENABLED == "true") and (counter == NOTIFY_TIME) and (ROCKET_ENABLED == "true"):
                     for i in range(0, len(RCON_PORT)):
                         if rcon_notify(RCON_PORT[i], RCON_PASSWORD[i]):
-                            print("    -Unable to notify the reboot on port " + str(RCON_PORT[i]) + "! Check your config!")
+                            print("    - Unable to notify the reboot on port " + str(RCON_PORT[i]) + "! Check your config!")
                         else:
-                            print("    -Reboot Notified on port " + str(RCON_PORT[i]))
+                            print("    - Reboot Notified on port " + str(RCON_PORT[i]))
 
             if (RCON_ENABLED == "true") and (ROCKET_ENABLED == "true"):
                 for i in range(0, len(RCON_PORT)):
                     if rcon_shutdown(RCON_PORT[i], RCON_PASSWORD[i]):
                         print("> Unable to stopping the server using rcon, using the classic method...")
-                        kill_server()
+                        if platform.system() == "Windows":
+                            kill_server()
+                        else:
+                            for i in range(0, len(SERVERS_TO_LAUNCH)):
+                                kill_server(SERVERS_TO_LAUNCH[i])
+
             else:
-                kill_server()
+                if platform.system() == "Windows":
+                    kill_server()
+                else:
+                    for i in range(0, len(SERVERS_TO_LAUNCH)):
+                        kill_server(SERVERS_TO_LAUNCH[i])
 
 
 if __name__ == '__main__':
