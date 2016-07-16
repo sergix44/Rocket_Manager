@@ -10,10 +10,10 @@ from xml.etree import ElementTree
 
 # --Constants
 
-MANAGER_FOLDER = "RocketManager"
-STEAM_FOLDER = "steamcmd"
-TMP_FOLDER = "temp"
-UNTURNED_PATH = "unturned"
+MANAGER_FOLDER = os.path.join(".", "RocketManager")
+STEAM_FOLDER = os.path.join(".", "steamcmd")
+TMP_FOLDER = os.path.join(".", "temp")
+UNTURNED_PATH = os.path.join(".", "unturned")
 
 ROCKET_EXTRACT_FOLDER = os.path.join(MANAGER_FOLDER, "last_rocket_download")
 BACKUP_BUNDLES_FOLDER = os.path.join(MANAGER_FOLDER, "bundles_backup")
@@ -185,9 +185,7 @@ def installer(folder):
                     dst_file = os.path.join(UNTURNED_PATH, "Unturned_Headless_Data", "Managed", f)
                 shutil.copyfile(src_file, dst_file)
         if platform.system() != "Windows":
-            shutil.copyfile(os.path.join(folder, "Scripts", "start.sh"), os.path.join(".", "start.sh"))
             shutil.copyfile(os.path.join(folder, "RocketLauncher.exe"), os.path.join(UNTURNED_PATH, "RocketLauncher.exe"))
-            os.system("chmod 755 " + os.path.join(".", "start.sh"))
             os.system("chmod 755 " + os.path.join(UNTURNED_PATH, "RocketLauncher.exe"))
         return False
     except IOError:
@@ -267,7 +265,10 @@ def start_server(server):
     if platform.system() == "Windows":
         os.system("cd " + UNTURNED_PATH + "\ & start Unturned.exe -nographics -batchmode -silent-crashes +secureserver/" + server)
     else:
-        os.system("screen -dmS " + server + " ./start.sh " + server)
+        st_api = os.path.join(STEAM_FOLDER, "linux32", "steamclient.so")
+        ut_api = os.path.join(UNTURNED_PATH, "Unturned_Data", "Plugins", "x86", "steamclient.so")
+        os.system("if [ -f " + st_api + " ]; then if ! diff " + st_api + " " + ut_api + " >/dev/null; then cp " + st_api + " " + ut_api + "; fi fi")
+        os.system("cd " + UNTURNED_PATH + " && ulimit -n 2048 && screen -dmS " + server + " mono RocketLauncher.exe " + server)
 
 
 def steamcmd_run():
@@ -298,7 +299,7 @@ def bundles(mode):
 
 def bootstrap():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.9                         ")
+    print("                          SergiX44's Rocket Manager 1.9.1                       ")
     print("--------------------------------------------------------------------------------\n\n")
 
     print("> Checking folders...")
@@ -342,7 +343,7 @@ def bootstrap():
                 time.sleep(1)
                 sys.exit(1)
     if (platform.system() != "Windows") and ROCKET_ENABLED == "false":
-        print("ERROR: This tool can run under Linux only with Rocket enabled, due a bug with the Unturned console. Please enable rocket.")
+        print("ERROR: This tool can run under Linux only with Rocket enabled, due a bug with the Unturned console. Please enable Rocket.")
         sys.exit(100)
 
 
@@ -352,6 +353,7 @@ def main():
     while 1:
         rocket_installed = True
         rocket_downloaded = True
+        cycle_interrupted = False
 
         # reloading config
         print("> Reloading config...")
@@ -427,16 +429,27 @@ def main():
             # timer
             counter = REBOOT_TIME
             while counter >= 0:
-                sys.stdout.write('> Waiting %s ...\r' % str(counter))
-                sys.stdout.flush()
-                time.sleep(1)
-                counter -= 1
-                if (RCON_ENABLED == "true") and (counter == NOTIFY_TIME) and (ROCKET_ENABLED == "true"):
-                    for i in range(0, len(RCON_PORT)):
-                        if rcon_notify(RCON_PORT[i], RCON_PASSWORD[i]):
-                            print("    - Unable to notify the reboot on port " + str(RCON_PORT[i]) + "! Check your config!")
-                        else:
-                            print("    - Reboot Notified on port " + str(RCON_PORT[i]))
+                try:
+                    sys.stdout.write('> Waiting %s ...\r' % str(counter))
+                    sys.stdout.flush()
+                    time.sleep(1)
+                    counter -= 1
+                    if (RCON_ENABLED == "true") and (counter == NOTIFY_TIME) and (ROCKET_ENABLED == "true"):
+                        for i in range(0, len(RCON_PORT)):
+                            if rcon_notify(RCON_PORT[i], RCON_PASSWORD[i]):
+                                print("    - Unable to notify the reboot on port " + str(RCON_PORT[i]) + "! Check your config!")
+                            else:
+                                print("    - Reboot Notified on port " + str(RCON_PORT[i]))
+                except KeyboardInterrupt:
+                    print("\n> Stopping the counting cycle ...")
+                    cycle_interrupted = True
+                    break
+
+            if cycle_interrupted:
+                inp = raw_input("> You have interrupted the cycle, would you like to stop the servers? (Y/n) ")
+                if inp.lower() == "n":
+                    print("> Bye!")
+                    sys.exit(0)
 
             if (RCON_ENABLED == "true") and (ROCKET_ENABLED == "true"):
                 for i in range(0, len(RCON_PORT)):
@@ -447,13 +460,18 @@ def main():
                         else:
                             for i in range(0, len(SERVERS_TO_LAUNCH)):
                                 kill_server(SERVERS_TO_LAUNCH[i])
-
             else:
                 if platform.system() == "Windows":
                     kill_server()
                 else:
                     for i in range(0, len(SERVERS_TO_LAUNCH)):
                         kill_server(SERVERS_TO_LAUNCH[i])
+
+            if cycle_interrupted:
+                inp = raw_input("> You have interrupted the cycle, would you to exit? (y/N) ")
+                if inp.lower() == "y":
+                    print("> Bye!")
+                    sys.exit(0)
 
 
 if __name__ == '__main__':
