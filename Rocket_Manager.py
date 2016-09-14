@@ -36,6 +36,7 @@ URL_STEAM_LINUX = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_lin
 
 PROCNAME_WIN = "Unturned.exe"
 
+socket.setdefaulttimeout(10)
 
 # --Functions
 def write_config(name):
@@ -69,33 +70,33 @@ def load_config(name):
     global APIKEY
     global BACKUP_BUNDLES
     global ROCKET_ENABLED
-
+    
     if not os.path.isfile(name):
         write_config(name)
         return True
     try:
         with open(name, 'rt') as f:
             tree = ElementTree.parse(f)
-
+        
         node = tree.find("rebootEvery")
         REBOOT_TIME = int(node.attrib.get("seconds"))
-
+        
         node = tree.find("steamUpdates")
         VALIDATE_AT_BOOT = node.attrib.get("validate")
-
+        
         node = tree.find("unturnedFolder")
         BACKUP_BUNDLES = node.attrib.get("recoveryBundlesAfterUpdates")
         if VALIDATE_AT_BOOT != "true":
             BACKUP_BUNDLES = "false"
-
+        
         node = tree.find("rocket")
         APIKEY = node.attrib.get("apikey")
         ROCKET_ENABLED = node.attrib.get("useRocket")
-
+        
         node = tree.find("steam")
         STEAM_USER = node.attrib.get("username")
         STEAM_PASS = node.attrib.get("password")
-
+        
         SERVERS_TO_LAUNCH = []
         RCON_PASSWORD = []
         RCON_PORT = []
@@ -103,16 +104,16 @@ def load_config(name):
             SERVERS_TO_LAUNCH.append(node.attrib.get("name"))
             RCON_PORT.append(int(node.attrib.get("rconPort")))
             RCON_PASSWORD.append(node.attrib.get("rconPassword"))
-
+        
         node = tree.find("servers")
         RCON_ENABLED = node.attrib.get("rconEnabled")
-
+        
         node = tree.find("notifyBefore")
         NOTIFY_TIME = int(node.attrib.get("seconds"))
         if NOTIFY_TIME > REBOOT_TIME:
             NOTIFY_TIME = REBOOT_TIME
         return False
-
+    
     except:
         write_config(name)
         return True
@@ -126,10 +127,10 @@ def downloader(i):
                 urllib.urlretrieve(URL_STEAM_WIN, OUTPUT_ZIP_STEAM_WIN)
             else:
                 urllib.urlretrieve(URL_STEAM_LINUX, OUTPUT_ZIP_STEAM_LINUX)
-
+        
         except:
             err = True
-
+    
     if i == "rocket":
         try:
             if platform.system() == "Windows":
@@ -159,6 +160,8 @@ def test_zip(namezip):
         else:
             return False
     except zipfile.BadZipfile:
+        return False
+    except IOError:
         return False
 
 
@@ -222,7 +225,7 @@ def rcon_notify(port, passw):
         s.recv(1024)
         time.sleep(2.5)
         s.close()
-
+        
         s.close()
         return False
     except Exception:
@@ -246,7 +249,7 @@ def rcon_shutdown(port, passw):
         s.recv(1024)
         time.sleep(2.5)
         s.close()
-
+        
         return False
     except Exception:
         return True
@@ -299,9 +302,9 @@ def bundles(mode):
 
 def bootstrap():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.9.1                       ")
+    print("                          SergiX44's Rocket Manager 1.9.2                       ")
     print("--------------------------------------------------------------------------------\n\n")
-
+    
     print("> Checking folders...")
     if not os.path.exists(MANAGER_FOLDER):
         os.makedirs(MANAGER_FOLDER)
@@ -309,13 +312,13 @@ def bootstrap():
         os.makedirs(STEAM_FOLDER)
     if not os.path.exists(TMP_FOLDER):
         os.makedirs(TMP_FOLDER)
-
+    
     print("> Loading config...")
     if load_config(os.path.join(MANAGER_FOLDER, "config_RocketManager.xml")):
         print("Close and edit config_RocketManager.xml, then restart me!")
         raw_input("Press any key to continue...")
         sys.exit(1)
-
+    
     if not os.path.isfile(STEAM_EXECUTABLE):
         ex = True
         while ex:
@@ -326,7 +329,7 @@ def bootstrap():
                     print("ERROR: Unable to download steam! Please check your internet settings!")
                     raw_input("Press any key to continue...")
                     sys.exit(3)
-
+                
                 if platform.system() == "Windows":
                     extractor(OUTPUT_ZIP_STEAM_WIN, STEAM_FOLDER)
                 else:
@@ -349,12 +352,12 @@ def bootstrap():
 
 def main():
     bootstrap()
-
+    
     while 1:
         rocket_installed = True
         rocket_downloaded = True
         cycle_interrupted = False
-
+        
         # reloading config
         print("> Reloading config...")
         if load_config(os.path.join(MANAGER_FOLDER, "config_RocketManager.xml")):
@@ -362,32 +365,37 @@ def main():
                   "Config file regenerated, edit config_RocketManager.xml, then restart.")
             raw_input("Press any key to continue...")
             sys.exit(2)
-
+        
         # saving bundles
         if BACKUP_BUNDLES == "true":
             print("> Saving Bundles...")
             if bundles("save"):
                 print("ERROR: Cannot saving Bundles, aborting...")
-
+        
         # launch steam cmd
         if (not os.path.isdir(UNTURNED_PATH)) or (VALIDATE_AT_BOOT == "true"):
             print("> Launching SteamCMD...")
             steamcmd_run()
-
+        
         # recovering bundles
         if BACKUP_BUNDLES == "true":
             print("> Recovering Bundles...")
             if bundles("restore"):
                 print("ERROR: Cannot recovering Bundles, aborting...")
-
+        
         if ROCKET_ENABLED == "true":
             # download
             print("> Downloading rocket...")
+            count = 5
             while downloader("rocket"):
                 print("ERROR: Unable to download rocket! Please check your internet settings!\n"
                       "> Retrying in 5 seconds..")
+                if count == 0:
+                    print("ERROR: Unable to download rocket after 5 retries, skipping...")
+                    break
+                count -= 1
                 time.sleep(5)
-
+            
             # extract
             print("> Extracting rocket...")
             if test_zip(OUTPUT_ZIP_ROCKET):
@@ -396,12 +404,12 @@ def main():
                 extractor(OUTPUT_ZIP_ROCKET, ROCKET_EXTRACT_FOLDER)
             else:
                 print("> Failed to extract Rocket zip (maybe a malformed zip?)")
-                if os.listdir(ROCKET_EXTRACT_FOLDER):
+                if os.path.exists(ROCKET_EXTRACT_FOLDER):
                     print("> Using the lastest correct download...")
                 else:
                     print("> Not failover found, launching servers...")
                     rocket_downloaded = False
-
+            
             # Moving files
             if rocket_downloaded:
                 print("> Installing rocket...")
@@ -413,11 +421,11 @@ def main():
                         print("> Unable to install rocket! Restarting the procedure...")
                         clean_up()
                         rocket_installed = False
-
+            
             # clean up zips and extracted files
             print("> Cleaning up...")
             clean_up()
-
+        
         if (rocket_installed and ROCKET_ENABLED) or (not ROCKET_ENABLED):
             # launching servers
             print("> Launching servers...")
@@ -425,7 +433,7 @@ def main():
                 print("    - Launching " + SERVERS_TO_LAUNCH[i])
                 start_server(SERVERS_TO_LAUNCH[i])
                 time.sleep(1)
-
+            
             # timer
             counter = REBOOT_TIME
             while counter >= 0:
@@ -444,13 +452,13 @@ def main():
                     print("\n> Stopping the counting cycle ...")
                     cycle_interrupted = True
                     break
-
+            
             if cycle_interrupted:
                 inp = raw_input("> You have interrupted the cycle, would you like to stop the servers? (Y/n) ")
                 if inp.lower() == "n":
                     print("> Bye!")
                     sys.exit(0)
-
+            
             if (RCON_ENABLED == "true") and (ROCKET_ENABLED == "true"):
                 for i in range(0, len(RCON_PORT)):
                     if rcon_shutdown(RCON_PORT[i], RCON_PASSWORD[i]):
@@ -466,7 +474,7 @@ def main():
                 else:
                     for i in range(0, len(SERVERS_TO_LAUNCH)):
                         kill_server(SERVERS_TO_LAUNCH[i])
-
+            
             if cycle_interrupted:
                 inp = raw_input("> You have interrupted the cycle, would you to exit? (y/N) ")
                 if inp.lower() == "y":
