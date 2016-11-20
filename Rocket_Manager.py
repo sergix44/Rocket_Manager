@@ -38,6 +38,7 @@ PROCNAME_WIN = "Unturned.exe"
 
 socket.setdefaulttimeout(10)
 
+
 # --Functions
 def write_config(name):
     f = open(name, "w")
@@ -179,18 +180,8 @@ def clean_up():
 
 def installer(folder):
     try:
-        for f in os.listdir(folder):
-            if not os.path.isdir(os.path.join(folder, f)):
-                src_file = os.path.join(folder, f)
-                if platform.system() == "Windows":
-                    dst_file = os.path.join(UNTURNED_PATH, "Unturned_Data", "Managed", f)
-                else:
-                    dst_file = os.path.join(UNTURNED_PATH, "Unturned_Headless_Data", "Managed", f)
-                shutil.copyfile(src_file, dst_file)
-        if platform.system() != "Windows":
-            shutil.copyfile(os.path.join(folder, "RocketLauncher.exe"), os.path.join(UNTURNED_PATH, "RocketLauncher.exe"))
-            os.system("chmod 755 " + os.path.join(UNTURNED_PATH, "RocketLauncher.exe"))
-        return False
+        shutil.rmtree(os.path.join(folder, 'Scripts'))
+        return merge_files(folder, UNTURNED_PATH)
     except IOError:
         return True
 
@@ -212,14 +203,14 @@ def merge_files(root_src_dir, root_dst_dir):
         return True
 
 
-def rcon_notify(port, passw):
+def rcon(port, passw, message):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(("127.0.0.1", port))
         s.settimeout(5)
         s.send("login " + passw + "\n")
         s.recv(1024)
-        s.send("broadcast [Manager] This server will restart in " + str(NOTIFY_TIME) + " seconds\n")
+        s.send("broadcast {0}\n".format(message))
         s.recv(1024)
         s.send("quit\n")
         s.recv(1024)
@@ -227,29 +218,6 @@ def rcon_notify(port, passw):
         s.close()
         
         s.close()
-        return False
-    except Exception:
-        return True
-
-
-def rcon_shutdown(port, passw):
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(("127.0.0.1", port))
-        s.settimeout(5)
-        s.send("login " + passw + "\n")
-        s.recv(1024)
-        s.send("broadcast Rebooting...\n")
-        s.recv(1024)
-        s.send("save\n")
-        s.recv(1024)
-        s.send("shutdown\n")
-        s.recv(1024)
-        s.send("quit\n")
-        s.recv(1024)
-        time.sleep(2.5)
-        s.close()
-        
         return False
     except Exception:
         return True
@@ -302,7 +270,7 @@ def bundles(mode):
 
 def bootstrap():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.9.2                       ")
+    print("                          SergiX44's Rocket Manager 1.9.3                       ")
     print("--------------------------------------------------------------------------------\n\n")
     
     print("> Checking folders...")
@@ -444,7 +412,7 @@ def main():
                     counter -= 1
                     if (RCON_ENABLED == "true") and (counter == NOTIFY_TIME) and (ROCKET_ENABLED == "true"):
                         for i in range(0, len(RCON_PORT)):
-                            if rcon_notify(RCON_PORT[i], RCON_PASSWORD[i]):
+                            if rcon(RCON_PORT[i], RCON_PASSWORD[i], "[Rocket_Manager] This server will restart in " + str(NOTIFY_TIME) + " seconds"):
                                 print("    - Unable to notify the reboot on port " + str(RCON_PORT[i]) + "! Check your config!")
                             else:
                                 print("    - Reboot Notified on port " + str(RCON_PORT[i]))
@@ -461,7 +429,7 @@ def main():
             
             if (RCON_ENABLED == "true") and (ROCKET_ENABLED == "true"):
                 for i in range(0, len(RCON_PORT)):
-                    if rcon_shutdown(RCON_PORT[i], RCON_PASSWORD[i]):
+                    if rcon(RCON_PORT[i], RCON_PASSWORD[i], "Rebooting now..."):
                         print("> Unable to stopping the server using rcon, using the classic method...")
                         if platform.system() == "Windows":
                             kill_server()
