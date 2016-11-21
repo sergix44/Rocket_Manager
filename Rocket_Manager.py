@@ -203,21 +203,24 @@ def merge_files(root_src_dir, root_dst_dir):
         return True
 
 
-def rcon(port, passw, message):
+def rcon(port, passw, message=None, command=None):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(("127.0.0.1", port))
         s.settimeout(5)
         s.send("login " + passw + "\n")
         s.recv(1024)
-        s.send("broadcast {0}\n".format(message))
-        s.recv(1024)
+        if message is not None:
+            s.send("broadcast {0}\n".format(message))
+            s.recv(1024)
+        if command is not None:
+            s.send("{0}\n".format(command))
+            s.recv(1024)
         s.send("quit\n")
         s.recv(1024)
-        time.sleep(2.5)
+        time.sleep(1.5)
         s.close()
         
-        s.close()
         return False
     except Exception:
         return True
@@ -270,7 +273,7 @@ def bundles(mode):
 
 def bootstrap():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.9.3                       ")
+    print("                          SergiX44's Rocket Manager 1.9.4                       ")
     print("--------------------------------------------------------------------------------\n\n")
     
     print("> Checking folders...")
@@ -429,7 +432,7 @@ def main():
             
             if (RCON_ENABLED == "true") and (ROCKET_ENABLED == "true"):
                 for i in range(0, len(RCON_PORT)):
-                    if rcon(RCON_PORT[i], RCON_PASSWORD[i], "Rebooting now..."):
+                    if rcon(RCON_PORT[i], RCON_PASSWORD[i], "Rebooting now...", "shutdown"):
                         print("> Unable to stopping the server using rcon, using the classic method...")
                         if platform.system() == "Windows":
                             kill_server()
