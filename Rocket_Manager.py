@@ -413,7 +413,7 @@ def main():
                     sys.stdout.flush()
                     time.sleep(1)
                     counter -= 1
-                    if (RCON_ENABLED == "true") and (counter == NOTIFY_TIME) and (ROCKET_ENABLED == "true"):
+                    if (RCON_ENABLED == "true") and (counter == NOTIFY_TIME):
                         for i in range(0, len(RCON_PORT)):
                             if rcon(RCON_PORT[i], RCON_PASSWORD[i], "[Rocket_Manager] This server will restart in " + str(NOTIFY_TIME) + " seconds"):
                                 print("    - Unable to notify the reboot on port " + str(RCON_PORT[i]) + "! Check your config!")
@@ -430,7 +430,7 @@ def main():
                     print("> Bye!")
                     sys.exit(0)
             
-            if (RCON_ENABLED == "true") and (ROCKET_ENABLED == "true"):
+            if (RCON_ENABLED == "true"):
                 for i in range(0, len(RCON_PORT)):
                     if rcon(RCON_PORT[i], RCON_PASSWORD[i], "Rebooting now...", "shutdown"):
                         print("> Unable to stopping the server using rcon, using the classic method...")
