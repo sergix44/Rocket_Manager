@@ -22,7 +22,7 @@ STEAM_EXECUTABLE = "steamcmd.exe" if platform.system() == "Windows" else "steamc
 STEAM_EXECUTABLE = os.path.join(STEAM_FOLDER, STEAM_EXECUTABLE)
 
 # For Win
-URL_ROCKET_BETA = "http://api.rocketmod.net/download/unturned/latest/"
+URL_ROCKET_BETA = "https://ci.rocketmod.net/job/Rocket.Unturned/lastSuccessfulBuild/artifact/Rocket.Unturned/bin/Release/Rocket.zip"
 URL_STEAM_WIN = "http://media.steampowered.com/installer/steamcmd.zip"
 
 OUTPUT_ZIP_STEAM_WIN = os.path.join(TMP_FOLDER, "steam_temp.zip")
@@ -31,7 +31,7 @@ OUTPUT_ZIP_ROCKET = os.path.join(TMP_FOLDER, "rocket_temp.zip")
 
 # For Linux
 
-URL_ROCKET_LINUX = "http://api.rocketmod.net/download/unturned-linux/latest/"
+URL_ROCKET_LINUX = "https://ci.rocketmod.net/job/Rocket.Unturned%20Linux/lastSuccessfulBuild/artifact/Rocket.Unturned/bin/Release/Rocket.zip"
 URL_STEAM_LINUX = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz"
 
 PROCNAME_WIN = "Unturned.exe"
@@ -46,7 +46,7 @@ def write_config(name):
 <config>
 	<rebootEvery seconds="3600" />
 	<unturnedFolder recoveryBundlesAfterUpdates="false" />
-	<rocket useRocket="true" apikey=""/>
+	<rocket useRocket="true"/>
 	<steam username="" password="" />
 	<steamUpdates validate="true" />
 	<servers rconEnabled="false">
@@ -68,7 +68,6 @@ def load_config(name):
     global VALIDATE_AT_BOOT
     global STEAM_USER
     global STEAM_PASS
-    global APIKEY
     global BACKUP_BUNDLES
     global ROCKET_ENABLED
     
@@ -91,7 +90,6 @@ def load_config(name):
             BACKUP_BUNDLES = "false"
         
         node = tree.find("rocket")
-        APIKEY = node.attrib.get("apikey")
         ROCKET_ENABLED = node.attrib.get("useRocket")
         
         node = tree.find("steam")
@@ -135,9 +133,9 @@ def downloader(i):
     if i == "rocket":
         try:
             if platform.system() == "Windows":
-                urllib.urlretrieve(URL_ROCKET_BETA + APIKEY, OUTPUT_ZIP_ROCKET)
+                urllib.urlretrieve(URL_ROCKET_BETA, OUTPUT_ZIP_ROCKET)
             else:
-                urllib.urlretrieve(URL_ROCKET_LINUX + APIKEY, OUTPUT_ZIP_ROCKET)
+                urllib.urlretrieve(URL_ROCKET_LINUX, OUTPUT_ZIP_ROCKET)
         except:
             err = True
     return err
@@ -273,7 +271,7 @@ def bundles(mode):
 
 def bootstrap():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.9.4                       ")
+    print("                          SergiX44's Rocket Manager 1.9.5                       ")
     print("--------------------------------------------------------------------------------\n\n")
     
     print("> Checking folders...")
