@@ -15,7 +15,7 @@ This is a service to help you install rocket!
     + Double click on it and configure.
  
 # Configuration
-  + Steam: Your steam login username & your steam password.
-  + Rocket: https://rocketmod.net/api and generate a api, then put it into the api section of the config for rocket
-  + Go back and rerun your Rocket Manager python file, and done.
+  + Start rocketmanager for the first time.
+  + Steam: Insert steam account credential in config file.
+  + Go back and re-run your Rocket Manager python file, and done.
  
