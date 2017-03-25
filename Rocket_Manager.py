@@ -53,7 +53,11 @@ def write_config(name):
 		<server name="server1" rconPort="27013" rconPassword="pass" />
 		<server name="server2" rconPort="27014" rconPassword="pass" />
 	</servers>
-	<notifyBefore seconds="60" />
+	<notifications>
+	    <notifyBefore seconds="60" />
+	    <notifyBefore seconds="30" />
+	    <notifyBefore seconds="15" />
+	</notifications>
 </config>''')
     f.close()
 
@@ -107,10 +111,11 @@ def load_config(name):
         node = tree.find("servers")
         RCON_ENABLED = node.attrib.get("rconEnabled")
         
-        node = tree.find("notifyBefore")
-        NOTIFY_TIME = int(node.attrib.get("seconds"))
-        if NOTIFY_TIME > REBOOT_TIME:
-            NOTIFY_TIME = REBOOT_TIME
+        NOTIFY_TIME = []
+        for node in tree.iter("notifyBefore"):
+            val = int(node.attrib.get("seconds"))
+            if val < REBOOT_TIME:
+                NOTIFY_TIME.append(val)
         return False
     
     except:
@@ -195,7 +200,7 @@ def merge_files(root_src_dir, root_dst_dir):
                 dst_file = os.path.join(dst_dir, file_)
                 if os.path.exists(dst_file):
                     os.remove(dst_file)
-                shutil.move(src_file, dst_dir)
+                shutil.copy(src_file, dst_dir)
         return False
     except:
         return True
@@ -271,7 +276,7 @@ def bundles(mode):
 
 def bootstrap():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.9.5                       ")
+    print("                          SergiX44's Rocket Manager 1.9.6                       ")
     print("--------------------------------------------------------------------------------\n\n")
     
     print("> Checking folders...")
@@ -411,9 +416,9 @@ def main():
                     sys.stdout.flush()
                     time.sleep(1)
                     counter -= 1
-                    if (RCON_ENABLED == "true") and (counter == NOTIFY_TIME):
+                    if (RCON_ENABLED == "true") and (counter in NOTIFY_TIME):
                         for i in range(0, len(RCON_PORT)):
-                            if rcon(RCON_PORT[i], RCON_PASSWORD[i], "[Rocket_Manager] This server will restart in " + str(NOTIFY_TIME) + " seconds"):
+                            if rcon(RCON_PORT[i], RCON_PASSWORD[i], "[Rocket_Manager] This server will restart in " + str(counter) + " seconds"):
                                 print("    - Unable to notify the reboot on port " + str(RCON_PORT[i]) + "! Check your config!")
                             else:
                                 print("    - Reboot Notified on port " + str(RCON_PORT[i]))
