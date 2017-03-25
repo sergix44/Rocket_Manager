@@ -276,7 +276,7 @@ def bundles(mode):
 
 def bootstrap():
     print("--------------------------------------------------------------------------------")
-    print("                          SergiX44's Rocket Manager 1.9.6                       ")
+    print("                          SergiX44's Rocket Manager 1.9.5                       ")
     print("--------------------------------------------------------------------------------\n\n")
     
     print("> Checking folders...")
