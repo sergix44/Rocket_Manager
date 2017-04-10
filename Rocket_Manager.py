@@ -112,7 +112,7 @@ def load_config(name):
         RCON_PORT = []
         for node in tree.iter("server"):
             SERVERS_TO_LAUNCH.append(node.attrib.get("name"))
-            SERVER_IP.append(int(node.attrib.get("serverIP")))
+            SERVER_IP.append(node.attrib.get("serverIP"))
             RCON_PORT.append(int(node.attrib.get("rconPort")))
             RCON_PASSWORD.append(node.attrib.get("rconPassword"))
         
@@ -427,9 +427,9 @@ def main():
                     if (RCON_ENABLED == "true") and (counter in NOTIFY_TIME):
                         for i in range(0, len(RCON_PORT)):
                             if rcon(SERVER_IP[i], RCON_PORT[i], RCON_PASSWORD[i], "[Rocket_Manager] This server will restart in " + str(counter) + " seconds"):
-                                print("    - Unable to notify the reboot on port " + str(SERVER_IP[i]):str(RCON_PORT[i]) + "! Check your config!")
+                                print("    - Unable to notify the reboot on port " + str(SERVER_IP[i]) + ":" + str(RCON_PORT[i]) + "! Check your config!")
                             else:
-                                print("    - Reboot Notified on port " + str(SERVER_IP[i]):str(RCON_PORT[i]))
+                                print("    - Reboot Notified on port " + str(SERVER_IP[i]) + ":" + str(RCON_PORT[i]))
                 except KeyboardInterrupt:
                     print("\n> Stopping the counting cycle ...")
                     cycle_interrupted = True
