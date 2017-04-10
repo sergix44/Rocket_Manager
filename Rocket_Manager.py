@@ -45,13 +45,14 @@ def write_config(name):
     f.write('''<?xml version="1.0" encoding="UTF-8"?>
 <config>
 	<rebootEvery seconds="3600" />
+	<startDelay seconds="20" />
 	<unturnedFolder recoveryBundlesAfterUpdates="false" />
 	<rocket useRocket="true"/>
 	<steam username="" password="" />
 	<steamUpdates validate="true" />
 	<servers rconEnabled="false">
-		<server name="server1" rconPort="27013" rconPassword="pass" />
-		<server name="server2" rconPort="27014" rconPassword="pass" />
+		<server name="server1" serverIP="127.0.0.1" rconPort="27013" rconPassword="pass" />
+		<server name="server2" serverIP="127.0.0.1" rconPort="27014" rconPassword="pass" />
 	</servers>
 	<notifications>
 	    <notifyBefore seconds="60" />
@@ -65,8 +66,10 @@ def write_config(name):
 def load_config(name):
     global REBOOT_TIME
     global NOTIFY_TIME
+    global START_DELAY
     global SERVERS_TO_LAUNCH
     global RCON_ENABLED
+    global SERVER_IP
     global RCON_PORT
     global RCON_PASSWORD
     global VALIDATE_AT_BOOT
@@ -84,6 +87,9 @@ def load_config(name):
         
         node = tree.find("rebootEvery")
         REBOOT_TIME = int(node.attrib.get("seconds"))
+
+        node = tree.find("startDelay")
+        START_DELAY = int(node.attrib.get("seconds"))
         
         node = tree.find("steamUpdates")
         VALIDATE_AT_BOOT = node.attrib.get("validate")
@@ -101,10 +107,12 @@ def load_config(name):
         STEAM_PASS = node.attrib.get("password")
         
         SERVERS_TO_LAUNCH = []
+        SERVER_IP = []
         RCON_PASSWORD = []
         RCON_PORT = []
         for node in tree.iter("server"):
             SERVERS_TO_LAUNCH.append(node.attrib.get("name"))
+            SERVER_IP.append(int(node.attrib.get("serverIP")))
             RCON_PORT.append(int(node.attrib.get("rconPort")))
             RCON_PASSWORD.append(node.attrib.get("rconPassword"))
         
@@ -206,10 +214,10 @@ def merge_files(root_src_dir, root_dst_dir):
         return True
 
 
-def rcon(port, passw, message=None, command=None):
+def rcon(ip, port, passw, message=None, command=None):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(("127.0.0.1", port))
+        s.connect((ip, port))
         s.settimeout(5)
         s.send("login " + passw + "\n")
         s.recv(1024)
@@ -406,7 +414,7 @@ def main():
             for i in range(0, len(SERVERS_TO_LAUNCH)):
                 print("    - Launching " + SERVERS_TO_LAUNCH[i])
                 start_server(SERVERS_TO_LAUNCH[i])
-                time.sleep(1)
+                time.sleep(START_DELAY)
             
             # timer
             counter = REBOOT_TIME
@@ -418,10 +426,10 @@ def main():
                     counter -= 1
                     if (RCON_ENABLED == "true") and (counter in NOTIFY_TIME):
                         for i in range(0, len(RCON_PORT)):
-                            if rcon(RCON_PORT[i], RCON_PASSWORD[i], "[Rocket_Manager] This server will restart in " + str(counter) + " seconds"):
-                                print("    - Unable to notify the reboot on port " + str(RCON_PORT[i]) + "! Check your config!")
+                            if rcon(SERVER_IP[i], RCON_PORT[i], RCON_PASSWORD[i], "[Rocket_Manager] This server will restart in " + str(counter) + " seconds"):
+                                print("    - Unable to notify the reboot on port " + str(SERVER_IP[i]):str(RCON_PORT[i]) + "! Check your config!")
                             else:
-                                print("    - Reboot Notified on port " + str(RCON_PORT[i]))
+                                print("    - Reboot Notified on port " + str(SERVER_IP[i]):str(RCON_PORT[i]))
                 except KeyboardInterrupt:
                     print("\n> Stopping the counting cycle ...")
                     cycle_interrupted = True
@@ -435,7 +443,7 @@ def main():
             
             if (RCON_ENABLED == "true"):
                 for i in range(0, len(RCON_PORT)):
-                    if rcon(RCON_PORT[i], RCON_PASSWORD[i], "Rebooting now...", "shutdown"):
+                    if rcon(SERVER_IP[i], RCON_PORT[i], RCON_PASSWORD[i], "Rebooting now...", "shutdown"):
                         print("> Unable to stopping the server using rcon, using the classic method...")
                         if platform.system() == "Windows":
                             kill_server()
